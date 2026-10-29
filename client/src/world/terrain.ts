@@ -19,11 +19,28 @@ export function buildGround(hole: Hole): THREE.Mesh {
   const colors: number[] = [];
   const color = new THREE.Color();
 
+  const road = hole.def.ob.find((o) => o.label === 'Road');
+  const roadTop = road ? Math.max(...road.polygon.map((p) => p[1])) : 0;
   const surfaceColor = (mx: number, my: number) => {
     const ob = hole.def.ob.find((o) => pointInPolygon(mx, my, o.polygon));
-    if (ob) return ob.label === 'Road' ? COLORS.asphalt : COLORS.obLawn;
+    // The road is two lanes wide; the rest of that OB strip is verge.
+    if (ob) return ob.label === 'Road' && my > roadTop - 15 ? COLORS.asphalt : COLORS.obLawn;
     return SURFACE_COLOR[hole.world.surfaceAt(mx, -my)];
   };
+
+  // Shade under canopies: darker the closer to a trunk, a cheap stand-in for ambient occlusion.
+  const shadeAt = (mx: number, my: number) => {
+    let shade = 0;
+    for (const t of hole.world.treesNear(mx, -my)) {
+      const d = Math.hypot(mx - t.x, -my - t.z);
+      const r = t.canopyRx * (t.trunkHeight === 0 ? 0.9 : 1.15);
+      if (d < r) shade += (1 - d / r) * (t.trunkHeight === 0 ? 0.12 : 0.3);
+    }
+    return Math.min(0.42, shade);
+  };
+  // Broad, soft variation so big areas aren't one flat color.
+  const patch = (mx: number, my: number) =>
+    Math.sin(mx * 0.071 + my * 0.023) * 0.5 + Math.sin(mx * 0.023 - my * 0.059 + 1.7) * 0.5;
 
   const vert = (mx: number, my: number) => {
     // Map (x east, y north) to world (x, height, -y).
@@ -48,8 +65,13 @@ export function buildGround(hole: Hole): THREE.Mesh {
         vert(tri[2][0], tri[2][1]);
         const cx = (tri[0][0] + tri[1][0] + tri[2][0]) / 3;
         const cy = (tri[0][1] + tri[1][1] + tri[2][1]) / 3;
+        const kind = hole.world.surfaceAt(cx, -cy);
         color.set(surfaceColor(cx, cy));
-        color.offsetHSL(rng.range(-0.01, 0.01), 0, rng.range(-0.03, 0.03));
+        const p = patch(cx, cy);
+        color.offsetHSL(p * 0.012 + rng.range(-0.008, 0.008), p * 0.04, p * 0.025 + rng.range(-0.025, 0.025));
+        // Mown stripes across the fairway, every 4 m.
+        if (kind === 'fairway' || kind === 'green') color.offsetHSL(0, 0, Math.floor(cy / 4) % 2 === 0 ? 0.035 : -0.01);
+        color.multiplyScalar(1 - shadeAt(cx, cy));
         for (let k = 0; k < 3; k++) colors.push(color.r, color.g, color.b);
       }
     }
@@ -60,6 +82,18 @@ export function buildGround(hole: Hole): THREE.Mesh {
   geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   geo.computeVertexNormals();
   const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+/** A wide plain of rough beyond the hole's bounds, so the ground never ends inside the fog. */
+export function buildOuterGround(hole: Hole): THREE.Mesh {
+  const { bounds } = hole.def;
+  const cx = (bounds.minX + bounds.maxX) / 2;
+  const cy = (bounds.minY + bounds.maxY) / 2;
+  const geo = new THREE.PlaneGeometry(1600, 1600, 1, 1).rotateX(-Math.PI / 2);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: new THREE.Color(SURFACE_COLOR.rough).multiplyScalar(0.92) }));
+  mesh.position.set(cx, -0.08, -cy);
   mesh.receiveShadow = true;
   return mesh;
 }

@@ -86,14 +86,59 @@ export function buildTrees(trees: TreeInstance[]): THREE.Group {
 
   const group = new THREE.Group();
   const trunkGeo = new THREE.CylinderGeometry(0.7, 1, 1, 6).translate(0, 0.5, 0);
-  const blobGeo = new THREE.IcosahedronGeometry(1, 1);
-  const coneGeo = new THREE.ConeGeometry(1, 1, 7);
-  group.add(instanced(trunkGeo, trunks), instanced(blobGeo, blobs), instanced(coneGeo, cones));
+  const blobGeo = shadeByHeight(new THREE.IcosahedronGeometry(1, 1), 0.62, 1.08);
+  const coneGeo = shadeByHeight(new THREE.ConeGeometry(1, 1, 7), 0.7, 1.05);
+  const foliage = swayingMaterial();
+  group.add(
+    instanced(trunkGeo, trunks, new THREE.MeshLambertMaterial({ flatShading: true })),
+    instanced(blobGeo, blobs, foliage),
+    instanced(coneGeo, cones, foliage),
+  );
+  group.userData.update = (t: number) => (foliage.userData.time.value = t);
   return group;
 }
 
-function instanced(geo: THREE.BufferGeometry, parts: Part[]): THREE.InstancedMesh {
-  const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ flatShading: true }), Math.max(parts.length, 1));
+/** Vertex colors from dark at the bottom to light at the top, so canopies read as rounded. */
+function shadeByHeight(geo: THREE.BufferGeometry, bottom: number, top: number): THREE.BufferGeometry {
+  const g = geo.index ? geo.toNonIndexed() : geo;
+  const pos = g.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  g.computeBoundingBox();
+  const { min, max } = g.boundingBox!;
+  for (let i = 0; i < pos.count; i++) {
+    const t = (pos.getY(i) - min.y) / (max.y - min.y);
+    const v = bottom + (top - bottom) * t;
+    colors.set([v, v, v], i * 3);
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  return g;
+}
+
+/** Foliage material with a gentle breeze sway, more at the top of each canopy. */
+function swayingMaterial(): THREE.MeshLambertMaterial {
+  const mat = new THREE.MeshLambertMaterial({ flatShading: true, vertexColors: true });
+  const time = { value: 0 };
+  mat.userData.time = time;
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = time;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nuniform float uTime;')
+      .replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+        #ifdef USE_INSTANCING
+          float phase = instanceMatrix[3].x * 0.21 + instanceMatrix[3].z * 0.17;
+          float lift = max(0.0, position.y + 0.6);
+          transformed.x += sin(uTime * 1.3 + phase) * 0.025 * lift;
+          transformed.z += cos(uTime * 1.1 + phase * 1.3) * 0.018 * lift;
+        #endif`,
+      );
+  };
+  return mat;
+}
+
+function instanced(geo: THREE.BufferGeometry, parts: Part[], material: THREE.Material): THREE.InstancedMesh {
+  const mesh = new THREE.InstancedMesh(geo, material, Math.max(parts.length, 1));
   mesh.count = parts.length;
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();

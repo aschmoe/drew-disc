@@ -68,7 +68,7 @@ export function placeBasket(hole: Hole): THREE.Group {
   return b;
 }
 
-/** Tee pad and tee sign. */
+/** Tee pad (the sign is in decor.ts). */
 export function buildTee(hole: Hole): THREE.Group {
   const g = new THREE.Group();
   const tee = hole.def.tees[0];
@@ -78,12 +78,6 @@ export function buildTee(hole: Hole): THREE.Group {
   pad.receiveShadow = true;
   g.add(pad);
 
-  const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.2, 0.1), lambert(COLORS.trunk));
-  post.position.set(base.x - 2.6, base.y + 0.6, base.z - 3);
-  const board = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.6, 0.05), lambert('#2e5d3b'));
-  board.position.set(base.x - 2.6, base.y + 1.35, base.z - 3);
-  board.rotation.y = 0.5;
-  g.add(post, board);
   g.traverse((o) => {
     if (o instanceof THREE.Mesh) o.castShadow = true;
   });

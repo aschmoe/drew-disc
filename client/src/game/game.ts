@@ -365,6 +365,11 @@ export class Game {
 
   // --- Frame update -----------------------------------------------------------
 
+  /** Today's wind, for the flag and the clouds. */
+  get windNow(): Wind {
+    return this.wind;
+  }
+
   /** Advance one rendered frame. */
   tick(dt: number): void {
     this.now += dt;

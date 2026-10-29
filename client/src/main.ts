@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { buildHole, loadCourse, loadHoleDef } from './content/hole';
 import { Game } from './game/game';
 import { createScene } from './world/scene';
-import { buildGround, buildPath } from './world/terrain';
+import { buildDecor, buildSkyDressing, buildTeeSign, buildWindFlag } from './world/decor';
+import { buildGround, buildOuterGround, buildPath } from './world/terrain';
 import { buildTrees } from './world/trees';
 import { buildOBStakes, buildTee, placeBasket } from './world/props';
 
@@ -23,7 +24,22 @@ async function boot() {
   const hole = buildHole(def);
 
   const { scene, sun } = createScene(course.environment);
-  scene.add(buildGround(hole), buildPath(hole), buildTrees(hole.trees), placeBasket(hole), buildTee(hole), buildOBStakes(hole));
+  const trees = buildTrees(hole.trees);
+  const flag = buildWindFlag(hole);
+  const sky = buildSkyDressing(course.environment, def.tees[0].pos);
+  scene.add(
+    buildOuterGround(hole),
+    buildGround(hole),
+    buildPath(hole),
+    trees,
+    buildDecor(hole),
+    placeBasket(hole),
+    buildTee(hole),
+    buildTeeSign(hole),
+    buildOBStakes(hole),
+    flag.object,
+    sky.object,
+  );
 
   const game = new Game(hole, course, scene, camera, sun, ui, canvas);
 
@@ -46,6 +62,10 @@ async function boot() {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     game.tick(dt);
+    const t = now / 1000;
+    trees.userData.update?.(t);
+    flag.update(t, game.windNow);
+    sky.update(t, game.windNow);
     renderer.render(scene, camera);
   });
 
