@@ -1,0 +1,71 @@
+{
+  "id": "seatac-01",
+  "number": 1,
+  "name": "Hole 1",
+  "par": 3,
+  "lengthFt": 360,
+  "_notes": [
+    "MAP frame: meters, x = east, y = north. Tee at the origin, throwing north.",
+    "Measured from the UDisc satellite view (~0.19 m/px) and the Santtu Disc Golf tee shot. Estimates; see docs/DESIGN.md section 3.",
+    "Surfaces: later entries win. Anything not covered is defaultSurface."
+  ],
+  "bounds": { "minX": -75, "maxX": 70, "minY": -32, "maxY": 150 },
+  "defaultSurface": "rough",
+  "terrain": {
+    "bumps": [
+      { "pos": [-25, 30], "radius": 18, "height": 0.6 },
+      { "pos": [28, 70], "radius": 22, "height": 0.9 },
+      { "pos": [-20, 95], "radius": 16, "height": 0.5 },
+      { "pos": [6, 128], "radius": 20, "height": 0.7 }
+    ]
+  },
+  "tees": [{ "id": "main", "pos": [0, 0], "headingDeg": 0 }],
+  "pins": [{ "id": "C", "pos": [0, 109.7], "default": true }],
+  "surfaces": [
+    {
+      "kind": "fairway",
+      "polygon": [[-6, -2], [6, -2], [6.5, 40], [5, 60], [4.6, 82], [8, 96], [8.5, 118], [-8.5, 118], [-8, 96], [-4.6, 82], [-5, 60], [-6.5, 40]]
+    },
+    {
+      "kind": "bramble",
+      "polygon": [[-46, 2], [-7.2, 2], [-7.6, 20], [-7.4, 40], [-6.6, 58], [-14, 62], [-30, 60], [-46, 54]]
+    },
+    { "kind": "path", "polyline": [[0, -8], [0, 2], [0.6, 30], [0.2, 55], [-0.6, 80], [-0.3, 100], [0, 106]], "width": 1.6 },
+    { "kind": "green", "circle": { "pos": [0, 109.7], "radius": 6 } },
+    { "kind": "tee", "polygon": [[-0.9, -3.6], [0.9, -3.6], [0.9, 0.6], [-0.9, 0.6]] }
+  ],
+  "ob": [
+    { "label": "Road", "polygon": [[-80, -8], [75, -8], [75, -40], [-80, -40]] },
+    { "label": "Private property", "polygon": [[-58, -8], [-58, 160], [-90, 160], [-90, -8]] }
+  ],
+  "trees": [
+    { "kind": "leafy", "pos": [10.7, 16.5], "height": 18, "canopyRadius": 7, "_note": "big tree right of the tee, overhangs the lane" },
+    { "kind": "leafy", "pos": [9.5, 30], "height": 15, "canopyRadius": 5 },
+    { "kind": "leafy", "pos": [8.4, 45], "height": 16, "canopyRadius": 5.2, "_note": "branches over the right edge mid-lane" },
+    { "kind": "young", "pos": [-7.8, 24], "height": 7, "canopyRadius": 2 },
+    { "kind": "young", "pos": [-8.2, 47], "height": 8, "canopyRadius": 2.2 },
+    { "kind": "leafy", "pos": [-7.2, 66], "height": 17, "canopyRadius": 4.6, "_note": "left post of the gap" },
+    { "kind": "leafy", "pos": [7, 71], "height": 18, "canopyRadius": 4.6, "_note": "right post of the gap" },
+    { "kind": "young", "pos": [-5, 77], "height": 9, "canopyRadius": 2 },
+    { "kind": "leafy", "pos": [9.6, 88], "height": 16, "canopyRadius": 4.5 },
+    { "kind": "leafy", "pos": [-9.6, 103], "height": 17, "canopyRadius": 5 },
+    { "kind": "fir", "pos": [12, 113], "height": 28 },
+    { "kind": "young", "pos": [4.5, 117], "height": 8, "canopyRadius": 2 },
+    { "kind": "fir", "pos": [-5, 124], "height": 30 }
+  ],
+  "treeFields": [
+    { "kind": "leafy", "polygon": [[7.5, -6], [55, -6], [55, 140], [9, 140], [9.5, 96], [6.5, 60], [8, 40]], "spacing": 8.5, "seed": 11 },
+    { "kind": "young", "polygon": [[7.5, -6], [55, -6], [55, 140], [9, 140], [9.5, 96], [6.5, 60], [8, 40]], "spacing": 9, "seed": 12 },
+    { "kind": "fir", "polygon": [[20, 0], [60, 0], [60, 150], [20, 150]], "spacing": 14, "seed": 13 },
+    { "kind": "leafy", "polygon": [[-55, 60], [-6.5, 62], [-6, 82], [-9.5, 96], [-10, 140], [-55, 140]], "spacing": 8.5, "seed": 21 },
+    { "kind": "fir", "polygon": [[-55, 70], [-15, 70], [-15, 150], [-55, 150]], "spacing": 13, "seed": 22 },
+    { "kind": "leafy", "polygon": [[-55, 120], [55, 120], [55, 150], [-55, 150]], "spacing": 8, "seed": 31 },
+    { "kind": "young", "polygon": [[-46, 4], [-9, 4], [-9, 56], [-46, 52]], "spacing": 11, "seed": 41 },
+    { "kind": "bush", "polygon": [[-46, 2], [-7.2, 2], [-7.6, 20], [-7.4, 40], [-6.6, 58], [-14, 62], [-30, 60], [-46, 54]], "spacing": 2.6, "seed": 42 },
+    { "kind": "bush", "polygon": [[6.4, -4], [8.5, -4], [8.5, 118], [7.6, 118], [7.4, 60], [6.6, 40]], "spacing": 2.4, "seed": 43 },
+    { "kind": "leafy", "polygon": [[-58, -6], [-46, -6], [-46, 60], [-58, 60]], "spacing": 7, "seed": 51 }
+  ],
+  "clearings": [
+    { "_note": "keep the lane, tee and green free of generated trees", "polygon": [[-6.5, -4], [6.5, -4], [7, 40], [5.5, 60], [5.2, 82], [8.8, 96], [9, 119], [-9, 119], [-8.8, 96], [-5.2, 82], [-5.5, 60], [-7, 40]] }
+  ]
+}

@@ -1,0 +1,62 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Check deploy secrets
+        id: check
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          if [ -n "$DEPLOY_HOST" ]; then echo "ready=true" >> "$GITHUB_OUTPUT"
+          else echo "::notice::DEPLOY_HOST secret not set, skipping deploy (build only)."; fi
+
+      - name: Configure SSH
+        if: steps.check.outputs.ready == 'true'
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Upload and switch release
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          REL="$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}"
+          rsync -rz --chmod=D755,F644 dist/ "deploy@$DEPLOY_HOST:/srv/drew-disc/releases/$REL/"
+          # Atomic symlink swap, then keep the 5 newest releases for rollback
+          ssh "deploy@$DEPLOY_HOST" "cd /srv/drew-disc && ln -sfn releases/$REL current.tmp && mv -Tf current.tmp current && ls -1dt releases/*/ | tail -n +6 | xargs -r rm -rf"
+          echo "Live: https://$DEPLOY_HOST ($REL)"
+
+      # The backend (leaderboards, multiplayer) arrives in milestone 4, with its own upload and
+      # restart step modeled on sequim-games.

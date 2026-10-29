@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flight Lab</title>
+    <style>
+      body { margin: 0; font: 13px system-ui, sans-serif; background: #f4f6f3; color: #17301f; }
+      header { padding: 10px 14px; background: #17301f; color: #fff; display: flex; gap: 14px; align-items: baseline; }
+      header h1 { margin: 0; font-size: 16px; }
+      main { display: grid; grid-template-columns: 280px 1fr; gap: 12px; padding: 12px; }
+      aside { display: grid; gap: 10px; align-content: start; }
+      fieldset { border: 1px solid #c9d2c7; border-radius: 8px; padding: 8px 10px; display: grid; gap: 6px; }
+      legend { font-weight: 700; }
+      label { display: grid; grid-template-columns: 110px 1fr; gap: 6px; align-items: center; }
+      input { width: 100%; min-width: 0; box-sizing: border-box; }
+      aside { min-width: 0; }
+      .row { display: flex; gap: 8px; flex-wrap: wrap; }
+      canvas { background: #fff; border: 1px solid #c9d2c7; border-radius: 8px; width: 100%; display: block; }
+      .plots { display: grid; gap: 12px; }
+      table { border-collapse: collapse; background: #fff; }
+      td, th { padding: 3px 8px; border-bottom: 1px solid #e3e8e1; text-align: right; font-variant-numeric: tabular-nums; }
+      th:first-child, td:first-child { text-align: left; }
+      .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+    </style>
+  </head>
+  <body>
+    <header><h1>Flight Lab</h1><span>Dev only. Throws every selected disc on a flat field and draws the paths.</span></header>
+    <main>
+      <aside id="controls"></aside>
+      <div class="plots">
+        <canvas id="top" width="1100" height="520"></canvas>
+        <canvas id="side" width="1100" height="240"></canvas>
+        <table id="table"></table>
+      </div>
+    </main>
+    <script type="module" src="./flight-lab.ts"></script>
+  </body>
+</html>

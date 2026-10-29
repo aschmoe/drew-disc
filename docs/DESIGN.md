@@ -90,7 +90,9 @@ pixel and the look comes from the tee shot in the Santtu Disc Golf playthrough
   ======= road (OB) =========      z -6 to -15
 ```
 
-Coordinates: origin at the tee, +z toward the basket, +x to the right (east), meters.
+Coordinates (MAP frame, as in the hole JSON): meters, origin at the tee, x = east, y = north.
+The sim and renderer use Three.js's WORLD frame (x = east, y = up, north = -z); the conversion
+lives in `client/src/sim/frame.ts`.
 
 | Feature | Estimate |
 |---|---|
@@ -301,65 +303,47 @@ drew-disc/
   client/
     index.html
     src/
-      main.ts             boot, loader, screen routing
-      game/               state machine: menu -> room -> hole -> turn -> aim -> flight -> settle -> score
-      sim/                flight model, collisions, rules, seeded RNG (pure TS, no Three.js)
-      world/              terrain builder, foliage instancing, basket, sky, fog, jets
-      player/             input (touch, mouse, keyboard), thrower character and animation
-      camera/             aim cam, chase cam, basket cam, flyover
-      ui/                 HUD, bag, angle slider, scorecard, leaderboard, share
-      net/                room transport: LocalRoom (single player) and WsRoom (multiplayer)
-      content/            loaders and schema validation for courses and holes
-    public/
-      courses/seatac/
-        course.json       name, hole list, environment preset (sky, fog, wind range, jet paths)
-        holes/01.json     tees, pins, par, terrain, trees, OB, mandos, decorations
-      models/  audio/
+      main.ts             boot, renderer, loop
+      sim/                flight model, collisions, frames, seeded RNG (pure TS, no Three.js)
+      content/            course and hole JSON -> sim world + render data (seeded generation)
+      world/              terrain, instanced trees, basket, props, sky, palette
+      game/               play loop: aim -> flight -> settle -> score; camera
+      ui/                 HUD and controls overlay
+      (later) player/     touch, mouse and keyboard input; thrower character
+      (later) net/        room transport: LocalRoom (single player) and WsRoom (multiplayer)
+    public/courses/seatac/
+      course.json         name, hole list, environment (sky, fog, sun, wind range)
+      holes/01.json       tees, pins, par, terrain bumps, surfaces, OB, trees, tree fields
     tools/
-      hole-editor.html    dev only: trace a hole over a local satellite image, export JSON
-      flight-lab.html     dev only: flight tuning harness
-  server/
-    src/index.ts          http routes (/api/health, /api/scores) + ws rooms
-    src/rooms.ts          room state, turn order, scoring
-    src/db.ts             SQLite: rounds, hole scores
+      flight-lab.html     dev only: flight tuning harness (npm run dev, /tools/flight-lab.html)
+      (later) hole-editor dev only: trace a hole over a local satellite image, export JSON
+  server/                 (milestone 4) http + ws rooms + SQLite
   shared/
-    protocol.ts           message types used by both client and server
-    discs.ts              disc catalog
-  deploy/
-    setup-server.sh       adapted from sequim-games
+    discs.ts              disc catalog and default bag
+    (later) protocol.ts   message types used by both client and server
+  test/                   vitest: flight model, collisions, hole data
+  deploy/                 SERVER.md, setup-server.sh
   .github/workflows/deploy.yml
-  docs/DESIGN.md
 ```
 
 The `sim/` folder has no rendering dependency, so the server could re-simulate a throw later if
 we ever want it, and the flight lab and unit tests run it headless.
 
-### Hole data (sketch)
+### Hole data
 
-```jsonc
-{
-  "id": "seatac-01",
-  "name": "Hole 1",
-  "par": 3,
-  "lengthFt": 360,
-  "tees": [{ "id": "main", "pos": [0, 0, 0], "facing": 0 }],
-  "pins": [{ "id": "C", "pos": [0, 0, 109.7], "default": true }],
-  "terrain": { "size": [160, 180], "heightmap": "heights-01.png", "maxHeight": 4, "surfaces": "surfaces-01.png" },
-  "trees": [
-    { "kind": "fir", "pos": [8.2, 0, 34], "height": 28, "seed": 17 },
-    { "kind": "round", "pos": [10.7, 0, 16.5], "canopyRadius": 8, "seed": 4 }
-  ],
-  "treeFields": [
-    { "kind": "fir", "polygon": [[6, 20], [40, 20], [40, 120], [6, 120]], "density": 0.035, "seed": 9 }
-  ],
-  "ob": [{ "polygon": [[-80, -6], [80, -6], [80, -20], [-80, -20]], "label": "Road" }],
-  "mandos": [],
-  "decorations": [{ "kind": "teeSign", "pos": [-2.5, 0, -1.5] }]
-}
-```
+See `client/public/courses/seatac/holes/01.json` for a full example. In short (MAP frame):
 
-Individual trees for the ones that matter to play, `treeFields` for the background forest so
-nobody hand-places 400 firs. Adding a hole = a new JSON file and an entry in `course.json`.
+- `tees`, `pins` (with a `default`), `par`, `lengthFt`, `bounds`.
+- `terrain.bumps`: gentle gaussian hills, so elevation is a few numbers rather than a heightmap.
+- `surfaces`: polygons, polylines (with a width) or circles of `fairway`, `path`, `rough`,
+  `bramble`, `tee`, `green`; later entries win, anything uncovered is `defaultSurface`. Surfaces
+  set ground friction.
+- `ob`: labeled polygons.
+- `trees`: individually placed trees that matter to play (`leafy`, `young`, `fir`, `bush`).
+- `treeFields`: seeded jittered grids of one kind inside a polygon, for the background forest, so
+  nobody hand-places 400 trees; `clearings` keep them out of the lane.
+
+Adding a hole = a new JSON file and an entry in `course.json`.
 
 ### Performance budget (mid-range phone)
 
@@ -389,7 +373,7 @@ The repo stays public (decided); the link is shared with Drew when it's ready.
 
 | # | Target | What ships |
 |---|---|---|
-| 1 | Nov 5 | Repo scaffold, static deploy live, greybox hole 1, first flight model with the flight lab |
+| 1 | Nov 5 | Repo scaffold, static deploy live, greybox hole 1, first flight model with the flight lab (**built**, deploy waiting on server setup) |
 | 2 | Nov 12 | Controls (pull and flick, angle, bag), basket catching, putting, OB, scoring: **playable greybox**, first playtest with you |
 | 3 | Nov 19 | Art pass: terrain, firs, sky and fog, thrower and animations, jets, sound |
 | 4 | Nov 26 | Backend: leaderboards, share cards, results screen |

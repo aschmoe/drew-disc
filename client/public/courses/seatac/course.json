@@ -1,0 +1,13 @@
+{
+  "id": "seatac",
+  "name": "SeaTac",
+  "location": "North SeaTac Park, SeaTac, WA",
+  "holes": ["01"],
+  "environment": {
+    "skyTop": "#8fb8d8",
+    "skyHorizon": "#dfe8e4",
+    "fog": { "color": "#cfdcd8", "near": 60, "far": 260 },
+    "sun": { "color": "#fff1d6", "intensity": 2.2, "elevationDeg": 38, "headingDeg": 220 },
+    "wind": { "minSpeed": 0, "maxSpeed": 3.5 }
+  }
+}
