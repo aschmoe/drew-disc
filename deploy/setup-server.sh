@@ -3,10 +3,9 @@
 #
 #   bash setup-server.sh <domain> ["<deploy public key>"]
 #
-# It creates (or reuses) the limited `deploy` user, gives it /srv/drew-disc, adds an nginx site
-# for <domain> next to the existing ones and gets an HTTPS certificate with Certbot. Static site
-# only for now; the backend (port 3101) is added in milestone 4. Safe to re-run; the key is only
-# needed the first time. Adapted from aschmoe/sequim-games.
+# It creates (or reuses) a limited `deploy` user, gives it /srv/drew-disc, adds an nginx site for
+# <domain> and gets an HTTPS certificate with Certbot. Static site only for now; the backend is
+# added in milestone 4. Safe to re-run; the key is only needed the first time.
 set -euo pipefail
 
 DOMAIN=${1:?usage: setup-server.sh <domain> ["<deploy public key>"]}

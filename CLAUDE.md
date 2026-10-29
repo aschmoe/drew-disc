@@ -1,7 +1,7 @@
 # Drew Disc
 
 Browser disc golf game for Drew's birthday (Dec 11, 2026). Vite + TypeScript + Three.js.
-Design, decisions and milestones: `docs/DESIGN.md`. Server and deploy pattern: `deploy/SERVER.md`.
+Design, decisions and milestones: `docs/DESIGN.md`.
 
 ## Commands
 
@@ -36,6 +36,8 @@ npm run build        # typecheck + build to dist/
 - Flight tuning lives in `TUNING` in `client/src/sim/flight.ts`. Change it with the flight lab
   open, then check `test/flight.test.ts` still passes (it pins distance ranges and curve directions).
 - Discs are data: add one to `shared/discs.ts` (name, type, flight numbers, color).
-- Pushes to `main` deploy to drew-disc.elliotsoft.com once the deploy secrets exist. It's a
-  surprise gift; the link is shared only when it's ready.
+- Pushes to `main` deploy to the live site once the deploy secrets exist. It's a surprise gift;
+  the link is shared only when it's ready.
+- Keep server specifics (IP, hostnames, ports, other services on the box, key paths) out of the
+  repo; it's public. Deploy config comes from GitHub secrets.
 - Avoid em dashes in user-facing copy.

@@ -4,7 +4,7 @@ A browser disc golf game for Drew's birthday (**December 11, 2026**). Mobile fir
 computer, low-poly 3D, one real hole to start (North SeaTac Park, hole 1), shareable scores with
 leaderboards, and real-time multiplayer as the last milestone.
 
-Live at `drew-disc.elliotsoft.com` once deploys are set up (see [Deploy](#deploy)).
+Ships as a static site plus a small backend later (see [Deploy](#11-deploy)).
 
 Status: **approved direction, in progress.** Items marked **(decide)** need an answer; items marked **(verify)**
 are estimates that need a ground-level check.
@@ -248,7 +248,7 @@ animation. Decide by the end of milestone 2.
 
 - After each hole: score against par, a short replay of your best throw, and **Share** (Web Share
   API on phones, copy link on desktop) with a little score card: *"Drew Disc, SeaTac #1: Birdie
-  (2). Beat it: drew-disc.elliotsoft.com"*.
+  (2). Beat it: <game link>"*.
 - **Leaderboards:** per hole (best score, ties broken by earliest) and per course (total strokes
   over a full round, once there's more than one hole). Name only, no accounts.
 - Stored in SQLite on the backend (see below). Submissions are lightly sanity checked
@@ -260,7 +260,7 @@ Real time, MVP as you described: everyone sees the same scene; when it's not you
 controls are hidden and a banner says **"Drew is throwing"**.
 
 - **Rooms:** create a room, get a 4-letter code and a share link
-  (`drew-disc.elliotsoft.com/r/ABCD`). Friends open it, type a name, done. 2 to 6 players.
+  (`<game URL>/r/ABCD`). Friends open it, type a name, done. 2 to 6 players.
 - **Turn order:** tee order is join order on hole 1, then by best score on the previous hole.
   After the tee, the player farthest from the basket throws next, as in real disc golf.
 - **What spectators see:** the thrower's aim, angle and disc choice stream live (throttled to
@@ -294,7 +294,7 @@ transport swap, not a rewrite.
   plain HTML/CSS overlay. Web Audio for sound.
 - **Server:** Node 24, `node:http` and `node:sqlite`, plus the `ws` package for WebSockets
   bundled into a single file with esbuild at build time, so the server still runs on the plain
-  `node:24-alpine` image with no installs on the droplet (per `SERVER.md`). Memory capped at 128 MB.
+  `node` image with no package installs on the server. Memory capped small.
 
 ### Repo layout
 
@@ -322,7 +322,7 @@ drew-disc/
     discs.ts              disc catalog and default bag
     (later) protocol.ts   message types used by both client and server
   test/                   vitest: flight model, collisions, hole data
-  deploy/                 SERVER.md, setup-server.sh
+  deploy/                 setup-server.sh (one-time server setup)
   .github/workflows/deploy.yml
 ```
 
@@ -355,17 +355,17 @@ Adding a hole = a new JSON file and an entry in `course.json`.
 
 ## 11. Deploy
 
-Per `SERVER.md` (the Sequim Games pattern):
+A push to `main` builds the site in GitHub Actions and rsyncs it to a small server, where nginx
+serves it straight from disk. Each deploy lands in its own release folder and a symlink swap makes
+it live, so a rollback is one symlink. `deploy/setup-server.sh` prepares a server once; the host,
+deploy key and known-hosts entry come from GitHub secrets (`DEPLOY_HOST`, `DEPLOY_SSH_KEY`,
+`DEPLOY_KNOWN_HOSTS`), and until they exist the workflow only builds.
 
-| Name | Value |
-|---|---|
-| Project slug | `drew-disc` |
-| Hostname | `drew-disc.elliotsoft.com` |
-| Internal port | `3101` (backend arrives in milestone 4) |
-| Deploy key | `~/.ssh/drew-disc_deploy` |
+Server specifics (addresses, ports, what else runs there) are kept out of this repo on purpose.
 
-Static site first (milestones 1 to 3), backend added later. The nginx `/api/` snippet will also
-need the WebSocket upgrade headers (`Upgrade`, `Connection`) for multiplayer.
+Static site first (milestones 1 to 3), backend added later behind nginx on a local-only port;
+its proxy block will also need the WebSocket upgrade headers (`Upgrade`, `Connection`) for
+multiplayer.
 
 The repo stays public (decided); the link is shared with Drew when it's ready.
 

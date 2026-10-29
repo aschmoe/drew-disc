@@ -59,4 +59,4 @@ jobs:
           echo "Live: https://$DEPLOY_HOST ($REL)"
 
       # The backend (leaderboards, multiplayer) arrives in milestone 4, with its own upload and
-      # restart step modeled on sequim-games.
+      # restart step.

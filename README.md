@@ -10,4 +10,4 @@ npm test
 npm run build   # -> dist/
 ```
 
-Design and architecture: [docs/DESIGN.md](docs/DESIGN.md). Deploys: [deploy/SERVER.md](deploy/SERVER.md).
+Design and architecture: [docs/DESIGN.md](docs/DESIGN.md).
