@@ -36,6 +36,9 @@ interface ArmPose {
   el: number;
   /** Elbow bend, radians. */
   elbow: number;
+  /** Shoulder rolled forward and in, 0..1: what lets a backhand reach cross in front of the
+   *  chest instead of through it. */
+  pro: number;
 }
 
 interface Pose {
@@ -61,7 +64,7 @@ const P = (
   lLeg: number,
   spread: number,
 ): Pose => ({ hips, torso, lean, crouch, r, l, rLeg, lLeg, spread });
-const A = (az: number, el: number, elbow: number): ArmPose => ({ az, el, elbow });
+const A = (az: number, el: number, elbow: number, pro = 0): ArmPose => ({ az, el, elbow, pro });
 
 // Key poses, right-handed, modeled on real throwers:
 // - Backhand reach-back: a wide, low lunge with the right foot toward the target, hips and chest
@@ -73,8 +76,8 @@ const A = (az: number, el: number, elbow: number): ArmPose => ({ az, el, elbow }
 const POSES = {
   rest: P(0, 0, 0.05, 0.08, A(15, 72, 0.9), A(-10, 82, 0.25), 0, 0, 0.05),
   backhand: {
-    reach: P(1.15, 0.55, 0.6, 0.8, A(-80, 15, 0.05), A(95, 30, 0.4), 0.1, -0.1, 0.45),
-    release: P(0.15, -0.05, 0.5, 0.6, A(25, 15, 0.05), A(-70, 45, 0.5), 0.1, -0.1, 0.4),
+    reach: P(1.15, 0.55, 0.6, 0.8, A(-68, 15, 0.05, 1), A(5, 35, 0.2), 0.1, -0.1, 0.45),
+    release: P(0.15, -0.05, 0.5, 0.6, A(25, 15, 0.05, 0.3), A(-70, 45, 0.5), 0.1, -0.1, 0.4),
     follow: P(-0.7, -0.4, 0.25, 0.3, A(85, 25, 0.35), A(-100, 60, 0.4), 0.05, 0.35, 0.2),
   },
   forehand: {
@@ -95,7 +98,7 @@ export const RELEASE_AT = 0.35;
 
 function lerpPose(a: Pose, b: Pose, t: number): Pose {
   const l = (x: number, y: number) => x + (y - x) * t;
-  const arm = (x: ArmPose, y: ArmPose): ArmPose => ({ az: l(x.az, y.az), el: l(x.el, y.el), elbow: l(x.elbow, y.elbow) });
+  const arm = (x: ArmPose, y: ArmPose): ArmPose => ({ az: l(x.az, y.az), el: l(x.el, y.el), elbow: l(x.elbow, y.elbow), pro: l(x.pro, y.pro) });
   return {
     hips: l(a.hips, b.hips),
     torso: l(a.torso, b.torso),
@@ -115,6 +118,12 @@ const mat = (color: string) => new THREE.MeshLambertMaterial({ color, flatShadin
 interface Limb {
   upper: THREE.Group;
   lower: THREE.Group;
+}
+
+/** Segment endpoints in the chest's frame, for checking that the arms clear the body. */
+export interface ArmSegments {
+  right: [THREE.Vector3, THREE.Vector3, THREE.Vector3];
+  left: [THREE.Vector3, THREE.Vector3, THREE.Vector3];
 }
 
 export class Character {
@@ -237,6 +246,15 @@ export class Character {
     this.apply(POSES.rest, 0);
   }
 
+  /** Shoulder, elbow and hand of each arm in the chest's frame (after the last pose). */
+  armSegments(): ArmSegments {
+    this.root.updateMatrixWorld(true);
+    const toChest = this.chest.matrixWorld.clone().invert();
+    const pt = (o: THREE.Object3D, y = 0) => o.localToWorld(new THREE.Vector3(0, y, 0)).applyMatrix4(toChest);
+    const limb = (l: Limb): [THREE.Vector3, THREE.Vector3, THREE.Vector3] => [pt(l.upper), pt(l.lower), pt(l.lower, -0.28)];
+    return { right: limb(this.rArm), left: limb(this.lArm) };
+  }
+
   setDiscColor(color: string): void {
     this.discMat.color.set(color);
   }
@@ -291,15 +309,17 @@ export class Character {
       leg.lower.rotation.set(-knee, 0, 0);
     }
 
-    const aim = (limb: Limb, a: ArmPose) => {
+    const aim = (limb: Limb, a: ArmPose, side: number) => {
+      // The shoulder joint rolls forward and toward the middle as `pro` rises.
+      limb.upper.position.set(side * (0.24 - 0.1 * a.pro), 0.47, -0.2 * a.pro);
       const az = THREE.MathUtils.degToRad(a.az);
       const el = THREE.MathUtils.degToRad(a.el);
       const dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), -Math.sin(el), -Math.cos(az) * Math.cos(el));
       limb.upper.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir);
       limb.lower.rotation.set(a.elbow, 0, 0);
     };
-    aim(this.rArm, p.r);
-    aim(this.lArm, p.l);
+    aim(this.rArm, p.r, 1);
+    aim(this.lArm, p.l, -1);
 
     // Keep the held disc flat (level with the character), whatever the arm is doing.
     this.root.updateMatrixWorld(true);
