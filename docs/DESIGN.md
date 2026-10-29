@@ -6,7 +6,7 @@ leaderboards, and real-time multiplayer as the last milestone.
 
 Live at `drew-disc.elliotsoft.com` once deploys are set up (see [Deploy](#deploy)).
 
-Status: **draft for review.** Items marked **(decide)** need an answer; items marked **(verify)**
+Status: **approved direction, in progress.** Items marked **(decide)** need an answer; items marked **(verify)**
 are estimates that need a ground-level check.
 
 ---
@@ -33,9 +33,10 @@ are estimates that need a ground-level check.
 **"Cozy Pacific Northwest, flat-shaded."** Think *A Short Hike* meets *Alto*: low-poly, flat
 shading, soft gradient sky, light fog that layers the tree lines, warm late-afternoon light.
 
-- **Trees:** tall Douglas firs as stacked, slightly jittered cones (the signature look of the hole),
-  mixed with round deciduous blobs and blackberry bramble clumps on the left. Instanced, so
-  hundreds cost almost nothing.
+- **Trees:** mostly leafy deciduous (alder, bigleaf maple, cottonwood) as clustered low-poly
+  blobs on thin trunks, which is what hole 1 actually looks like from the tee, with a few tall
+  Douglas firs (stacked, jittered cones) in the background tree line. Chest-high blackberry bramble
+  as lumpy hedges along the edges. Instanced, so hundreds cost almost nothing.
 - **Palette:** deep greens and teal shadows, a warm sunlight color, accents in disc colors (hot
   pink, orange, lime) so discs are always easy to spot.
 - **Ground:** gently rolling terrain with vertex-color patches (mown fairway, longer grass, dirt
@@ -55,18 +56,35 @@ the character, props and jet. No paid assets, no licensing questions.
 ## 3. Hole 1 (North SeaTac Park)
 
 From the UDisc map: **Par 3, 360 ft (~110 m)**, tee at the south end by the road, throwing north
-toward the C pin, dead straight. Measured off the satellite view at ~0.19 m per pixel, so every
-number below is **(verify)**.
+toward the C pin, dead straight. Distances are measured off the satellite view at ~0.19 m per
+pixel and the look comes from the tee shot in the Santtu Disc Golf playthrough
+(youtube.com/watch?v=3KfmGowbGio, 0:23). Numbers are still **(verify)**.
+
+**What the tee view shows:**
+
+- A **concrete tee pad** with room for an x-step run-up.
+- A **mown grass lane about 10 to 15 m wide**, with a worn **gravel and dirt path** running
+  straight down the middle of it.
+- **Left:** a wall of chest-high blackberry bramble and young trees. Missing left means a scramble
+  out of the brush.
+- **Right:** big leafy deciduous trees right at the edge of the lane. Near the tee their branches
+  lean out over the right side of the lane, so a high anhyzer line gets clipped early.
+- **Down the lane:** the lane stays open and runs between trees toward the basket. The
+  mid-fairway canopy from the map is the trees framing the lane, so it is a **gap shot**, not a
+  tree to throw around. Overhanging branches put a low-ish ceiling on it, which rewards a flat,
+  controlled line over a big sky hyzer.
+- **Flat**, as far as the video shows. Overcast PNW sky.
+- The video confirms **multiple pin positions** for this hole.
 
 ```
               N  (+z)
       woods   [C]   woods          z ~110 m  basket C, trees close behind and left
-      ####     |    #######
-     #####     |    ########       z 75-110  tall firs both sides, tightening near the pin
-      ###    (*?*)  #######        z 60-80   canopy over the line: gap or obstacle? (verify)
-   meadow      |     #######
-  brush/grass  |      ######       z 20-60   left opens into brushy meadow, right is a solid wall
-   ,,,,,,,     |   (O)  ####       z ~17     big round tree, ~11 m right of the line
+      ####    :|:   #######
+     #####    :|:   ########       z 75-110  trees both sides, tightening near the pin
+      ###     :|:   #######        z 60-80   lane runs between trees (gap shot, branches overhead)
+   bramble    :|:    #######
+   ,,,,,,,    :|:     ######       z 20-60   bramble left, tree wall right, path down the middle
+   ,,,,,,,    :|:  (O)  ####       z ~17     big leafy tree, branches overhang the right edge
   OB fence     |       ####
   (houses)    [T]                  z 0       tee pad
   ======= road (OB) =========      z -6 to -15
@@ -80,21 +98,18 @@ Coordinates: origin at the tee, +z toward the basket, +x to the right (east), me
 | Basket (pin C) | (0, 109.7) |
 | Right tree wall | starts x +5 to +8 m along most of the hole |
 | Big round tree near tee | (+10.7, 16.5), canopy radius ~8 m |
-| Mid-fairway canopy | x -5 to +5, z 60 to 80 |
-| Left meadow (brush, rough) | x -51 to -6, z 2 to 58 |
+| Mown lane | about x -6 to +6, full length |
+| Gravel path | about x -1 to +1, tee to basket |
+| Lane between trees, branches overhead | x -5 to +5, z 60 to 80 |
+| Left bramble and brush (heavy rough) | x -51 to -6, z 2 to 58 |
 | Left woods near basket | x -17 to -2, z 75 to 110 |
 | West property line (OB) | x < -59 |
 | Road behind tee (OB) | z -6 to -15 |
 
-What I need to lock this down **(verify)**:
-
-1. **Ground-level photos or a short video from the tee**, plus a couple from the fairway. The
-   satellite view can't show whether the mid-fairway canopy is a gap you throw under or a tree you
-   throw around. That decides the whole shot.
-2. **Elevation:** flat, uphill or downhill to the basket?
-3. **OB lines:** is the meadow or the property edge OB, or just rough? Any mandatory?
-4. **Pins:** hole 1 shows a C position. Do A and B exist for this hole? (Multiple pins are cheap in
-   the data model and add replay value.)
+Still open **(verify)**: where the A and B pins sit (C ships first), whether the brush or the
+property edge is OB or just rough (assumed: brush is heavy rough, the property edge and road are
+OB), and a look at the green around the basket. More frames from later in the same video would
+settle all three.
 
 **Hole authoring tool.** A dev-only editor page lays the satellite screenshot on the ground plane
 so trees, OB lines and pins can be placed by clicking, then exports the hole JSON. The screenshot
@@ -188,7 +203,24 @@ PDGA). Each lie is marked with a mini marker disc. Max strokes per hole: par + 4
 
 ## 6. Discs
 
-Made-up names (no brand trademarks), real-feeling numbers. Players start with a four-disc bag:
+Discs are pure data, so Drew's real bag can be dropped in later. Each disc is one entry in
+`shared/discs.ts`:
+
+```ts
+{
+  id: 'birthday-boy',
+  name: 'The Birthday Boy',
+  type: 'driver',            // putter | midrange | fairway | driver
+  flight: { speed: 12, glide: 5, turn: -1, fade: 3 },
+  color: '#ff3d8b',
+  stamp: 'drew',             // optional decal
+}
+```
+
+The flight model reads only the four flight numbers, so "add Drew's Destroyer" means typing its
+numbers (and a name of your choosing). A bag is a list of disc ids.
+
+Placeholder bag, with made-up names and real-feeling numbers:
 
 | Slot | Name | Type | Numbers |
 |---|---|---|---|
@@ -197,12 +229,9 @@ Made-up names (no brand trademarks), real-feeling numbers. Players start with a 
 | 3 | Puddle Jumper | Midrange | 5 / 5 / 0 / 1 |
 | 4 | Chain Seeker | Putter | 3 / 3 / 0 / 1 |
 
-**(decide)** Do you know Drew's real bag or favorite disc? The names, colors and numbers could
-mirror it.
-
 ## 7. The thrower
 
-A low-poly rigged character (CC0 base) with a short set of animations: idle, backhand reach-back
+A low-poly rigged character (CC0 base) with a short set of animations: idle, an x-step run-up into a backhand reach-back
 and release, forehand, putt, a celebration, a sad head-shake. The reach-back is driven by the pull
 amount and the release by the flick, so the body moves with your thumb. Each player picks a shirt
 color; Drew's player gets a birthday hat if his name matches.
@@ -354,9 +383,7 @@ Per `SERVER.md` (the Sequim Games pattern):
 Static site first (milestones 1 to 3), backend added later. The nginx `/api/` snippet will also
 need the WebSocket upgrade headers (`Upgrade`, `Connection`) for multiplayer.
 
-Surprise note: the URL is only shared when ready, but a **public** repo is visible to anyone who
-looks at your GitHub profile. **(decide)** Keep the repo private until the birthday? (If so, the
-setup script is pasted rather than `curl`ed, as `SERVER.md` describes.)
+The repo stays public (decided); the link is shared with Drew when it's ready.
 
 ## 12. Milestones (about 6 weeks)
 
@@ -374,9 +401,7 @@ on its own.
 
 ## 13. Open questions
 
-1. Ground-level photos or video of hole 1, elevation, OB lines, other pin positions. **(verify)**
-2. Drew's real bag or favorite disc? **(decide)**
-3. Private repo until the birthday? **(decide)**
-4. Is the "Cozy PNW, flat-shaded" direction right? **(decide)**
-5. Is pull and flick the right throw feel, or did you mean something specific from Disc Golf
-   Masters? I couldn't load its store page from my sandbox. **(decide)**
+1. A and B pin positions, OB lines and the basket area for hole 1. **(verify)**
+2. Drew's real bag: fill in `shared/discs.ts` whenever it's known.
+
+Settled: art direction and pull-and-flick controls approved; the repo stays public.
