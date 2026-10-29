@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { simulateThrow, M_TO_FT, type ThrowInput } from '../client/src/sim/flight';
+import { catchChance, simulateThrow, M_TO_FT, type ThrowInput } from '../client/src/sim/flight';
 import { flatWorld, type SimTree } from '../client/src/sim/world';
 
 const base: ThrowInput = {
@@ -105,6 +105,20 @@ describe('collisions', () => {
       if (r.inBasket) made++;
     }
     expect(made).toBeGreaterThanOrEqual(14);
+  });
+
+  it('the chains hold firm putts and let drives through more often', () => {
+    expect(catchChance(9, 0.05, 1.0)).toBeGreaterThan(0.95);
+    expect(catchChance(12, 0.05, 1.0)).toBeGreaterThan(0.8);
+    expect(catchChance(25, 0.05, 1.0)).toBeLessThan(0.3);
+    expect(catchChance(9, 0.25, 1.0)).toBeLessThan(catchChance(9, 0.05, 1.0));
+  });
+
+  it('a landed disc lies flat, even after a hard fade onto its edge', () => {
+    const r = throwIt({ discId: 'birthday-boy', power: 0.5, hyzerDeg: 30 });
+    const last = r.path[r.path.length - 1];
+    expect(last.n[1]).toBeGreaterThan(0.99);
+    expect(last.p[1]).toBeLessThan(0.05);
   });
 
   it('out of bounds is reported with the last in-bounds point', () => {

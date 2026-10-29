@@ -284,6 +284,8 @@ export function simulateThrow(input: ThrowInput, world: SimWorld, wind?: Wind): 
       const decel = mu * G * DT;
       const k = h > decel ? (h - decel) / h : 0;
       vel = v3(vel.x * k, 0, vel.z * k);
+      // Settle flat as it slides; a disc doesn't stay balanced on its edge.
+      normal = normalize(add(normal, scale(UP, DT * 14)));
     }
 
     const prev = pos;
@@ -316,6 +318,7 @@ export function simulateThrow(input: ThrowInput, world: SimWorld, wind?: Wind): 
           inBasket = true;
           pos = b.pos ?? pos;
           vel = v3();
+          normal = normalize(v3(0.15, 1, 0.1));
         } else {
           pos = b.pos ?? pos;
           vel = b.vel ?? vel;
@@ -326,8 +329,8 @@ export function simulateThrow(input: ThrowInput, world: SimWorld, wind?: Wind): 
 
     // Ground.
     const g = world.groundHeight(pos.x, pos.z);
-    if (!inBasket && pos.y <= g + 0.01) {
-      pos = v3(pos.x, g + 0.01, pos.z);
+    if (!inBasket && pos.y <= g + 0.012) {
+      pos = v3(pos.x, g + 0.012, pos.z);
       if (!grounded) {
         grounded = true;
         event(t, 'ground');
@@ -346,6 +349,8 @@ export function simulateThrow(input: ThrowInput, world: SimWorld, wind?: Wind): 
     if (inBasket || restingOnGround) break;
   }
 
+  // Lying still: flat on the ground (or in the tray).
+  if (!inBasket) normal = UP;
   record();
   event(t, inBasket ? 'in-basket' : 'rest');
   const ob = !inBasket && world.isOB(pos.x, pos.z);
@@ -402,6 +407,20 @@ function collideTree(tree: SimTree, prev: V3, pos: V3, vel: V3, branchesLive: bo
   return { kind: 'branch', pos, vel: scale(dir, kept) };
 }
 
+/**
+ * Chance the chains hold a disc that reaches them. A firm putt into the middle of the chains
+ * almost always stays; drives and edge hits cut through or bounce out.
+ */
+export function catchChance(speed: number, offCenter: number, heightAboveBase: number): number {
+  let p: number;
+  if (speed <= 10) p = 0.97;
+  else if (speed <= 22) p = 0.97 - ((speed - 10) / 12) * 0.67;
+  else p = Math.max(0.08, 0.3 - ((speed - 22) / 8) * 0.22);
+  if (offCenter > 0.2) p *= 0.75; // cutting the edge of the chains
+  if (heightAboveBase > 1.18 || heightAboveBase < 0.86) p *= 0.85; // top or bottom of the chains
+  return p;
+}
+
 interface BasketHit {
   kind: FlightEventKind | null;
   inChains: boolean;
@@ -423,12 +442,14 @@ function collideBasket(world: SimWorld, prev: V3, pos: V3, vel: V3, wasInChains:
   // Chains: the disc's edge reaches the chains once its center is within chainRadius + a bit.
   const inChains = d < BASKET.chainRadius + 0.06 && y > BASKET.chainBottom && y < BASKET.chainTop;
   if (inChains && !wasInChains) {
-    const center = d < 0.15 ? 0.1 : 0;
-    const pCatch = Math.max(0.05, Math.min(0.97, 1.25 - speed / 20 + center));
+    // How far off-center the disc's line is: distance from the pole to its horizontal path.
+    const h = Math.hypot(vel.x, vel.z);
+    const offset = h > 1e-6 ? Math.abs(dx * vel.z - dz * vel.x) / h : d;
+    const pCatch = catchChance(speed, offset, y);
     if (rng.next() < pCatch) {
       return { kind: 'in-basket', inChains, pos: v3(b.x + dx * 0.5, b.base + BASKET.trayBottom + 0.05, b.z + dz * 0.5) };
     }
-    if (speed > 15 && d > 0.12) {
+    if (speed > 15 && offset > 0.12) {
       return { kind: 'blow-through', inChains, vel: scale(vel, 0.45) };
     }
     const back = scale(normalize(v3(-vel.x, 0, -vel.z)), speed * rng.range(0.15, 0.35));

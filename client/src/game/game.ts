@@ -74,7 +74,7 @@ export class Game {
     this.result = null;
     this.markers.clear();
     this.trail.visible = false;
-    this.hud.set({ aimOffsetDeg: 0, hyzerDeg: 0 });
+    this.hud.set({ aimOffsetDeg: 0, hyzerDeg: 0, power: 0.85, discId: DEFAULT_BAG[1] });
     this.hud.setThrowEnabled(true);
     this.snapCamera();
     this.refresh();
@@ -151,6 +151,32 @@ export class Game {
     this.disc.scale.setScalar(1);
   }
 
+  /**
+   * A starting power for a putt that arrives at the middle of the chains. The player can still
+   * adjust it; this just means a putt doesn't inherit the drive's power.
+   */
+  private autoPuttPower(discId: string): number {
+    const b = this.hole.world.basket;
+    const target = b.base + 1.05;
+    const heightAtBasket = (power: number) => {
+      const input = this.shotInput({ ...this.hud.settings, discId, power, aimOffsetDeg: 0 }, 1);
+      const r = simulateThrow(input, { ...this.hole.world, basket: { ...b, z: b.z + 1e4 } }, this.wind);
+      const dist = this.basketDistance();
+      for (const sample of r.path) {
+        if (Math.hypot(sample.p[0] - input.from.x, sample.p[2] - input.from.z) >= dist - 0.2) return sample.p[1];
+      }
+      return -Infinity; // fell short
+    };
+    let lo = 0.05;
+    let hi = 1;
+    for (let i = 0; i < 14; i++) {
+      const mid = (lo + hi) / 2;
+      if (heightAtBasket(mid) < target) lo = mid;
+      else hi = mid;
+    }
+    return Math.round(((lo + hi) / 2) * 100) / 100;
+  }
+
   // --- Throwing --------------------------------------------------------------
 
   private throwDisc(): void {
@@ -197,7 +223,13 @@ export class Game {
       return;
     }
     this.phase = 'aim';
-    this.hud.set({ aimOffsetDeg: 0, hyzerDeg: 0, discId: this.isPutt() ? 'chain-seeker' : this.hud.settings.discId });
+    const putt = this.isPutt();
+    this.hud.set({
+      aimOffsetDeg: 0,
+      hyzerDeg: 0,
+      discId: putt ? 'chain-seeker' : this.hud.settings.discId,
+      ...(putt ? { power: this.autoPuttPower('chain-seeker') } : {}),
+    });
     this.hud.setThrowEnabled(true);
     this.refresh();
   }
