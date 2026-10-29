@@ -47,32 +47,46 @@ interface Pose {
   l: ArmPose;
   rLeg: number; // hip swing, + = forward
   lLeg: number;
+  spread: number; // each leg out to the side, radians (a wide stance)
 }
 
-const P = (hips: number, torso: number, lean: number, crouch: number, r: ArmPose, l: ArmPose, rLeg: number, lLeg: number): Pose => ({
-  hips, torso, lean, crouch, r, l, rLeg, lLeg,
-});
+const P = (
+  hips: number,
+  torso: number,
+  lean: number,
+  crouch: number,
+  r: ArmPose,
+  l: ArmPose,
+  rLeg: number,
+  lLeg: number,
+  spread: number,
+): Pose => ({ hips, torso, lean, crouch, r, l, rLeg, lLeg, spread });
 const A = (az: number, el: number, elbow: number): ArmPose => ({ az, el, elbow });
 
-// Key poses, right-handed. Backhand: coil left, reach back across the body, sweep through to the
-// right. Forehand: open to the right, arm back on the right side, whip forward and across.
+// Key poses, right-handed, modeled on real throwers:
+// - Backhand reach-back: a wide, low lunge with the right foot toward the target, hips and chest
+//   turned so the back faces the target, torso bent forward, the throwing arm reaching straight
+//   back away from the target at chest height, the off arm out toward the target for balance.
+// - Forehand reach-back: the same wide lunge with the left foot forward, chest opened to the right,
+//   the throwing arm straight back on the right side, the off arm out in front.
+// Arm azimuths are in the chest's frame, so a turned chest carries the arm with it.
 const POSES = {
-  rest: P(0, 0, 0.05, 0.08, A(15, 72, 0.9), A(-10, 82, 0.25), 0, 0),
+  rest: P(0, 0, 0.05, 0.08, A(15, 72, 0.9), A(-10, 82, 0.25), 0, 0, 0.05),
   backhand: {
-    reach: P(0.6, 0.6, 0.25, 0.35, A(-105, 10, 0.05), A(60, 55, 0.6), 0.35, -0.25),
-    release: P(-0.05, -0.1, 0.2, 0.25, A(35, 12, 0.05), A(-60, 50, 0.6), 0.35, -0.3),
-    follow: P(-0.35, -0.3, 0.15, 0.15, A(115, 30, 0.45), A(-95, 62, 0.5), 0.3, -0.05),
+    reach: P(1.15, 0.55, 0.6, 0.8, A(-80, 15, 0.05), A(95, 30, 0.4), 0.1, -0.1, 0.45),
+    release: P(0.15, -0.05, 0.5, 0.6, A(25, 15, 0.05), A(-70, 45, 0.5), 0.1, -0.1, 0.4),
+    follow: P(-0.7, -0.4, 0.25, 0.3, A(85, 25, 0.35), A(-100, 60, 0.4), 0.05, 0.35, 0.2),
   },
   forehand: {
-    reach: P(-0.3, -0.35, 0.15, 0.3, A(120, 32, 1.0), A(-40, 62, 0.5), -0.2, 0.35),
-    release: P(0.1, 0.1, 0.2, 0.25, A(25, 20, 0.3), A(-70, 55, 0.6), -0.2, 0.35),
-    follow: P(0.35, 0.35, 0.1, 0.15, A(-40, 40, 0.6), A(-100, 65, 0.4), -0.1, 0.3),
+    reach: P(-0.75, -0.45, 0.55, 0.7, A(110, 10, 0.25), A(-80, 25, 0.3), -0.1, 0.1, 0.45),
+    release: P(0.15, 0.15, 0.5, 0.55, A(30, 15, 0.35), A(-90, 45, 0.5), -0.1, 0.1, 0.4),
+    follow: P(0.6, 0.45, 0.25, 0.3, A(-20, 35, 0.6), A(-110, 60, 0.4), 0.35, 0.05, 0.2),
   },
   putt: {
-    rest: P(0, 0, 0.25, 0.35, A(5, 55, 1.1), A(-15, 72, 0.5), 0.2, -0.1),
-    reach: P(0, 0, 0.3, 0.6, A(0, 72, 1.7), A(-20, 70, 0.6), 0.2, -0.1),
-    release: P(0, 0, 0.15, 0.05, A(0, -5, 0.05), A(-25, 65, 0.5), 0.2, -0.1),
-    follow: P(0, 0, 0.1, 0, A(0, -20, 0.1), A(-25, 65, 0.5), 0.2, -0.1),
+    rest: P(0, 0, 0.25, 0.35, A(5, 55, 1.1), A(-15, 72, 0.5), 0.2, -0.1, 0.22),
+    reach: P(0, 0, 0.3, 0.6, A(0, 72, 1.7), A(-20, 70, 0.6), 0.2, -0.1, 0.25),
+    release: P(0, 0, 0.15, 0.05, A(0, -5, 0.05), A(-25, 65, 0.5), 0.2, -0.1, 0.22),
+    follow: P(0, 0, 0.1, 0, A(0, -20, 0.1), A(-25, 65, 0.5), 0.2, -0.1, 0.2),
   },
 };
 
@@ -91,6 +105,7 @@ function lerpPose(a: Pose, b: Pose, t: number): Pose {
     l: arm(a.l, b.l),
     rLeg: l(a.rLeg, b.rLeg),
     lLeg: l(a.lLeg, b.lLeg),
+    spread: l(a.spread, b.spread),
   };
 }
 
@@ -255,18 +270,24 @@ export class Character {
 
   private apply(p: Pose, idleTime: number): void {
     const breathe = idleTime ? Math.sin(idleTime * 1.6) * 0.012 : 0;
-    // A crouch bends both knees and drops the hips so the feet stay on the ground.
+    // Knees bend (thigh forward by half, shin back by the full bend) and legs swing and spread.
+    // The hips sit at the height of the shorter leg, so both feet stay on the ground.
     const knee = p.crouch;
-    this.hips.position.y = 0.92 - (1 - Math.cos(knee)) * 0.42 - Math.abs(p.rLeg - p.lLeg) * 0.03;
+    const legHeight = (swing: number) => {
+      const thigh = swing + knee * 0.5;
+      return (0.42 * Math.cos(thigh) + 0.42 * Math.cos(thigh - knee)) * Math.cos(p.spread);
+    };
+    this.hips.position.y = 0.08 + Math.min(legHeight(p.rLeg), legHeight(p.lLeg));
     this.hips.rotation.y = p.hips;
     this.chest.rotation.set(-p.lean + breathe, p.torso, 0);
-    this.head.rotation.set(p.lean * 0.6, -(p.hips + p.torso) * 0.6, 0);
+    // The head stays on the target while the body turns.
+    this.head.rotation.set(p.lean * 0.6, -(p.hips + p.torso) * 0.75, 0);
 
-    for (const [leg, swing] of [
-      [this.rLeg, p.rLeg],
-      [this.lLeg, p.lLeg],
+    for (const [leg, swing, side] of [
+      [this.rLeg, p.rLeg, 1],
+      [this.lLeg, p.lLeg, -1],
     ] as const) {
-      leg.upper.rotation.set(swing + knee * 0.5, 0, 0);
+      leg.upper.rotation.set(swing + knee * 0.5, 0, side * p.spread);
       leg.lower.rotation.set(-knee, 0, 0);
     }
 

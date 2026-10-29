@@ -1,5 +1,5 @@
-// Dev only: every key pose of the thrower, seen from behind (top row) and from above (bottom
-// row). The target is away from the camera / up the screen (pink stick).
+// Dev only: every key pose of the thrower, seen from behind like the game camera (top row), from
+// the side with the target to the left (middle row) and from above (bottom row, target up).
 
 import * as THREE from 'three';
 import { Character, RELEASE_AT, type ThrowAnim } from '../src/world/character';
@@ -17,7 +17,7 @@ const poses: { label: string; style: ThrowAnim; reach: number; follow: number | 
 ];
 
 const W = 1350;
-const H = 560;
+const H = 780;
 const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c') as HTMLCanvasElement, antialias: true });
 renderer.setSize(W, H);
 renderer.setScissorTest(true);
@@ -42,15 +42,17 @@ const xs = poses.map((p, i) => {
 const cam = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
 const cw = W / poses.length;
 xs.forEach((x, i) => {
-  for (const row of [0, 1]) {
-    cam.aspect = cw / (H / 2);
+  const rh = H / 3;
+  for (const row of [0, 1, 2]) {
+    cam.aspect = cw / rh;
     if (row === 0) cam.position.set(x + 1.2, 1.5, 4);
+    else if (row === 1) cam.position.set(x + 4.6, 1.1, 0);
     else cam.position.set(x, 6.5, 0.01);
-    cam.lookAt(x, row === 0 ? 0.95 : 0, 0);
+    cam.lookAt(x, row === 2 ? 0 : 0.85, 0);
     cam.updateProjectionMatrix();
-    const y = row === 0 ? H / 2 : 0;
-    renderer.setViewport(i * cw, y, cw, H / 2);
-    renderer.setScissor(i * cw, y, cw, H / 2);
+    const y = (2 - row) * rh;
+    renderer.setViewport(i * cw, y, cw, rh);
+    renderer.setScissor(i * cw, y, cw, rh);
     renderer.render(scene, cam);
   }
 });
