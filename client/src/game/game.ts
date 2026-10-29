@@ -11,7 +11,8 @@ import { v3, type V3 } from '../sim/vec';
 import { Controls, type ThrowGesture } from '../ui/controls';
 import { DebugPanel } from '../ui/debugPanel';
 import { Overlay, type ThrowRecord } from '../ui/overlay';
-import { buildDiscMesh, buildThrower, poseThrower } from '../world/props';
+import { Character, RELEASE_AT, type ThrowAnim } from '../world/character';
+import { buildDiscMesh } from '../world/props';
 import { followSun } from '../world/scene';
 import { formatFeet, maxStrokes, scoreName } from './score';
 import { AIM_LIMIT, HYZER_LIMIT, MAX_POWER, type ShotSettings } from './settings';
@@ -22,6 +23,8 @@ const CIRCLE_1 = 10; // meters, putting range
 const PREVIEW_FRACTION = 0.4;
 const LOOK_SECONDS = 3.5;
 const KEY_CHARGE_PER_SECOND = 0.75;
+/** Seconds from the start of the throw animation to the top of the follow-through. */
+const THROW_ANIM_SECONDS = 0.5;
 
 export class Game {
   private phase: Phase = 'aim';
@@ -52,7 +55,10 @@ export class Game {
   private overlay: Overlay;
   private controls: Controls;
   private debug: DebugPanel | null = null;
-  private thrower = buildThrower();
+  private character = new Character();
+  private thrower = this.character.root;
+  /** Style of the throw in progress (the animation keeps it even if settings change). */
+  private throwAnim: ThrowAnim = 'backhand';
   private disc: THREE.Mesh;
   private discId = '';
   private preview: THREE.Line;
@@ -224,6 +230,7 @@ export class Game {
     if (this.discId !== s.discId) {
       this.discId = s.discId;
       (this.disc.material as THREE.MeshLambertMaterial).color.set(getDisc(s.discId).color);
+      this.character.setDiscColor(getDisc(s.discId).color);
     }
     const aimDeg = this.basketHeading() + s.aimOffsetDeg;
     this.thrower.position.set(this.lie.x, this.lie.y, this.lie.z);
@@ -237,6 +244,9 @@ export class Game {
     const n = s.fullPreview ? r.path.length : Math.max(2, Math.floor(r.path.length * PREVIEW_FRACTION));
     setLine(this.preview, r.path.slice(0, n).map((p) => p.p));
     this.preview.visible = true;
+    // The disc is in the thrower's hand until the release.
+    this.disc.visible = false;
+    this.character.showHandDisc(true);
     this.disc.position.set(input.from.x, input.from.y, input.from.z);
     this.disc.quaternion.identity();
     this.disc.scale.setScalar(1);
@@ -285,8 +295,10 @@ export class Game {
     this.strokes++;
     this.hasThrown = true;
     this.phase = 'flight';
-    this.clock = 0;
+    // The flight starts when the swing reaches the release point.
+    this.clock = -RELEASE_AT * THROW_ANIM_SECONDS;
     this.followClock = 0;
+    this.throwAnim = this.isPutt() ? 'putt' : this.settings.style;
     this.lookUntil = 0;
     this.lastTrailIndex = -1;
     this.preview.visible = false;
@@ -369,6 +381,14 @@ export class Game {
 
     if (this.phase === 'flight' && this.result) {
       this.clock += dt;
+      if (this.clock < 0) {
+        // Still in the swing: the disc is in the hand and the camera holds.
+        const { pos, look } = this.aimCamera();
+        this.moveCamera(pos, look, dt, 4);
+        followSun(this.sun, this.camLook, this.sunOffset);
+        return;
+      }
+      this.disc.visible = true;
       const path = this.result.path;
       const end = path[path.length - 1].t;
       const t = Math.min(this.clock, end);
@@ -409,18 +429,16 @@ export class Game {
   }
 
   private animateThrower(dt: number): void {
-    const style = this.settings.style;
     if (this.followClock >= 0) {
-      this.followClock += dt / 0.45;
-      poseThrower(this.thrower, 0, this.followClock, style);
-      if (this.followClock >= 1) {
-        this.followClock = -1;
-        poseThrower(this.thrower, 0, 0, style);
-      }
+      this.followClock += dt / THROW_ANIM_SECONDS;
+      this.character.showHandDisc(this.followClock < RELEASE_AT);
+      this.character.pose(this.throwAnim, 0, this.followClock, this.now);
+      if (this.followClock >= 1.6) this.followClock = -1;
       return;
     }
+    const style: ThrowAnim = this.isPutt() ? 'putt' : this.settings.style;
     const pull = this.pullPower ?? this.keyCharge;
-    poseThrower(this.thrower, pull === null ? 0 : Math.min(1, pull / MAX_POWER + 0.15), 0, style);
+    this.character.pose(style, pull === null ? 0 : Math.min(1, pull / MAX_POWER + 0.15), null, this.now);
   }
 
   private aimCamera(): { pos: THREE.Vector3; look: THREE.Vector3 } {

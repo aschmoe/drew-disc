@@ -1,12 +1,23 @@
-// Dev only: the thrower's poses side by side, seen from behind (top row) and from above (bottom
-// row). Target is up the screen / away from the camera. Columns: BH reach, BH release, BH follow,
-// FH reach, FH release, FH follow.
+// Dev only: every key pose of the thrower, seen from behind (top row) and from above (bottom
+// row). The target is away from the camera / up the screen (pink stick).
 
 import * as THREE from 'three';
-import { buildThrower, poseThrower } from '../src/world/props';
+import { Character, RELEASE_AT, type ThrowAnim } from '../src/world/character';
 
-const W = 1200;
-const H = 520;
+const poses: { label: string; style: ThrowAnim; reach: number; follow: number | null }[] = [
+  { label: 'Rest', style: 'backhand', reach: 0, follow: null },
+  { label: 'BH reach', style: 'backhand', reach: 1, follow: null },
+  { label: 'BH release', style: 'backhand', reach: 0, follow: RELEASE_AT },
+  { label: 'BH follow', style: 'backhand', reach: 0, follow: 1 },
+  { label: 'FH reach', style: 'forehand', reach: 1, follow: null },
+  { label: 'FH release', style: 'forehand', reach: 0, follow: RELEASE_AT },
+  { label: 'FH follow', style: 'forehand', reach: 0, follow: 1 },
+  { label: 'Putt reach', style: 'putt', reach: 1, follow: null },
+  { label: 'Putt release', style: 'putt', reach: 0, follow: RELEASE_AT },
+];
+
+const W = 1350;
+const H = 560;
 const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c') as HTMLCanvasElement, antialias: true });
 renderer.setSize(W, H);
 renderer.setScissorTest(true);
@@ -17,36 +28,25 @@ const sun = new THREE.DirectionalLight('#ffffff', 2);
 sun.position.set(3, 6, 4);
 scene.add(sun);
 
-const poses: [number, number, 'backhand' | 'forehand'][] = [
-  [1, 0, 'backhand'],
-  [0, 0.5, 'backhand'],
-  [0, 1, 'backhand'],
-  [1, 0, 'forehand'],
-  [0, 0.5, 'forehand'],
-  [0, 1, 'forehand'],
-];
-const throwers = poses.map(([r, f, s], i) => {
-  const t = buildThrower();
-  poseThrower(t, r, f, s);
-  t.position.x = i * 10;
-  scene.add(t);
-  // A stick pointing at the target.
-  const arrow = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 1.2), new THREE.MeshBasicMaterial({ color: '#ff3d8b' }));
-  arrow.position.set(i * 10, 0.02, -1.2);
-  scene.add(arrow);
-  return t;
+const xs = poses.map((p, i) => {
+  const c = new Character();
+  c.pose(p.style, p.reach, p.follow, 0);
+  c.root.position.x = i * 10;
+  scene.add(c.root);
+  const stick = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 1.2), new THREE.MeshBasicMaterial({ color: '#ff3d8b' }));
+  stick.position.set(i * 10, 0.02, -1.4);
+  scene.add(stick);
+  return i * 10;
 });
 
-const cam = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+const cam = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
 const cw = W / poses.length;
-throwers.forEach((t, i) => {
-  for (const [row, pos] of [
-    [0, new THREE.Vector3(t.position.x, 1.6, 4)],
-    [1, new THREE.Vector3(t.position.x, 6, 0.01)],
-  ] as const) {
+xs.forEach((x, i) => {
+  for (const row of [0, 1]) {
     cam.aspect = cw / (H / 2);
-    cam.position.copy(pos);
-    cam.lookAt(t.position.x, row === 0 ? 1.1 : 0, row === 0 ? 0 : 0);
+    if (row === 0) cam.position.set(x + 1.2, 1.5, 4);
+    else cam.position.set(x, 6.5, 0.01);
+    cam.lookAt(x, row === 0 ? 0.95 : 0, 0);
     cam.updateProjectionMatrix();
     const y = row === 0 ? H / 2 : 0;
     renderer.setViewport(i * cw, y, cw, H / 2);
@@ -54,3 +54,8 @@ throwers.forEach((t, i) => {
     renderer.render(scene, cam);
   }
 });
+
+const labels = document.createElement('div');
+labels.style.cssText = `display:grid;grid-template-columns:repeat(${poses.length},1fr);width:${W}px;text-align:center;font:12px system-ui`;
+labels.innerHTML = poses.map((p) => `<div>${p.label}</div>`).join('');
+document.body.append(labels);
