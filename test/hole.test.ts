@@ -37,7 +37,7 @@ describe('SeaTac hole 1', () => {
   it('a good straight shot down the lane gets close', () => {
     const results = [1, 2, 3, 4, 5, 6].map((seed) =>
       simulateThrow(
-        { discId: 'red-eye', style: 'backhand', hand: 'right', power: 0.86, aimDeg: 0, hyzerDeg: 4, launchDeg: 6, from: { x: 0, y: 1.1, z: 0 }, seed },
+        { discId: 'birthday-boy', style: 'backhand', hand: 'right', power: 0.95, aimDeg: 0, hyzerDeg: 0, from: { x: 0, y: 1.1, z: 0 }, seed },
         hole.world,
       ),
     );

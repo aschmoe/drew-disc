@@ -112,7 +112,7 @@ const AREA = Math.PI * DISC_RADIUS * DISC_RADIUS;
 export const TUNING = {
   /** Arm speed (m/s) at power 0 and power 1. */
   armSpeedMin: 11,
-  armSpeedMax: 33,
+  armSpeedMax: 32,
   /** Arm speed range for putts. */
   puttSpeedMin: 4,
   puttSpeedMax: 13,
@@ -120,8 +120,8 @@ export const TUNING = {
   ratedBase: 11.5,
   ratedPerSpeed: 1.4,
   /** Roll rates in rad/s per flight-number unit. */
-  turnRate: 0.22,
-  fadeRate: 0.32,
+  turnRate: 0.12,
+  fadeRate: 0.4,
   /** Drag and lift from the flight numbers. */
   cd0Base: 0.12,
   cd0PerSpeed: 0.0075,
@@ -181,6 +181,19 @@ export function fadeSide(style: ThrowStyle, hand: Hand): 1 | -1 {
 export function windVector(wind: Wind | undefined): V3 {
   if (!wind || wind.speed === 0) return v3();
   return scale(headingToDir(wind.towardDeg), wind.speed);
+}
+
+/** Rotate v about a unit axis by angle (right-hand rule). */
+function rotateAbout(v: V3, axis: V3, angle: number): V3 {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  return add(add(scale(v, c), scale(cross(axis, v), s)), scale(axis, dot(axis, v) * (1 - c)));
+}
+
+/** Current bank relative to the flight direction: positive = left side down. */
+function bankOf(normal: V3, heading: V3): number {
+  const right = cross(heading, UP);
+  return Math.asin(Math.max(-1, Math.min(1, -dot(normal, right))));
 }
 
 /** Disc normal from heading, pitch (nose up positive) and roll (left side down positive). */
@@ -264,9 +277,14 @@ export function simulateThrow(input: ThrowInput, world: SimWorld, wind?: Wind): 
       const turnRate = TUNING.turnRate * -aero.turn * smoothstep(0.85, 1.15, s);
       const fadeRate = TUNING.fadeRate * (aero.fade + 0.4) * (1 - smoothstep(0.4, 0.9, s));
       const wobble = 1 / (0.4 + 0.6 * spin);
-      roll += side * (fadeRate - turnRate) * wobble * DT;
-      roll = Math.max(-TUNING.maxRoll, Math.min(TUNING.maxRoll, roll));
-      normal = attitude(heading, pitch, roll);
+      // The disc's attitude stays fixed in space apart from this roll about the flight direction.
+      // So as the flight curves, the launch's nose-up tilt turns into extra bank and the angle of
+      // attack falls away: a fading disc loses lift and drops, instead of curling on.
+      const dRoll = side * (fadeRate - turnRate) * wobble * DT;
+      const bank = bankOf(normal, heading);
+      if (Math.abs(bank + dRoll) < TUNING.maxRoll || Math.abs(bank + dRoll) < Math.abs(bank)) {
+        normal = normalize(rotateAbout(normal, heading, -dRoll));
+      }
 
       // Lift and drag.
       const alpha = Math.asin(Math.max(-1, Math.min(1, -dot(airDir, normal))));
@@ -297,12 +315,8 @@ export function simulateThrow(input: ThrowInput, world: SimWorld, wind?: Wind): 
       if (hit) {
         pos = hit.pos;
         vel = hit.vel;
-        if (hit.kind === 'branch') {
-          branchCooldown = 0.12;
-          roll += rng.range(-0.5, 0.5);
-        } else {
-          roll += rng.range(-0.3, 0.3);
-        }
+        if (hit.kind === 'branch') branchCooldown = 0.12;
+        normal = normalize(rotateAbout(normal, heading, rng.range(-0.5, 0.5) * (hit.kind === 'branch' ? 1 : 0.6)));
         grounded = grounded && pos.y <= world.groundHeight(pos.x, pos.z) + 0.02;
         event(t, hit.kind);
       }

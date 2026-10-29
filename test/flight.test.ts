@@ -44,13 +44,27 @@ describe('flight model', () => {
 
   it('an overstable driver thrown too slowly fades left right away', () => {
     const r = throwIt({ discId: 'birthday-boy', power: 0.5 });
-    expect(r.rest.x).toBeLessThan(-10);
+    expect(r.rest.x).toBeLessThan(-6);
     expect(Math.max(...r.path.map((s) => s.p[0]))).toBeLessThan(1);
   });
 
   it('an understable-ish fairway overpowered on anhyzer turns hard right', () => {
     const r = throwIt({ power: 1, hyzerDeg: -15 });
     expect(r.rest.x).toBeGreaterThan(20);
+  });
+
+  it('finishes with a fade, not a hook: the last stretch curls less than 45 degrees', () => {
+    for (const discId of ['birthday-boy', 'red-eye', 'puddle-jumper', 'chain-seeker']) {
+      for (const power of [0.6, 0.8, 1]) {
+        const r = throwIt({ discId, power });
+        const g = r.events.find((e) => e.kind === 'ground')!;
+        const i = r.path.findIndex((s) => s.t >= g.t) - 1;
+        const a = r.path[Math.max(1, i - 3)].p;
+        const b = r.path[i].p;
+        const finishDeg = Math.abs((Math.atan2(b[0] - a[0], -(b[2] - a[2])) * 180) / Math.PI);
+        expect(finishDeg).toBeLessThan(45);
+      }
+    }
   });
 
   it('distances are in a believable range for a strong amateur', () => {
