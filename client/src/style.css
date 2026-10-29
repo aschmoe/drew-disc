@@ -108,7 +108,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #cfdcd8; col
 .pad.nudge .pad-label { background: #fff3c4; }
 
 .hint {
-  position: absolute; left: 50%; bottom: calc(24vh + 160px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  position: absolute; left: 50%; top: calc(104px + env(safe-area-inset-top, 0px)); transform: translateX(-50%);
   width: max-content; max-width: calc(100vw - 32px); padding: 8px 14px; border-radius: 14px; background: rgba(23,48,31,0.82); color: #fff;
   font-size: 13px; font-weight: 700; text-align: center; pointer-events: none;
 }

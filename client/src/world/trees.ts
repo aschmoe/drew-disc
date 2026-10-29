@@ -17,7 +17,11 @@ interface Part {
 /** Every tree on the hole as a handful of instanced meshes (a few draw calls for hundreds of trees). */
 export function buildTrees(trees: TreeInstance[]): THREE.Group {
   const trunks: Part[] = [];
+  // Main canopy blobs get the rounder shape; the smaller extra blobs and the bushes use a cheaper
+  // one, and bushes cast no shadow. Keeps the foliage near 50k triangles instead of 130k.
   const blobs: Part[] = [];
+  const smallBlobs: Part[] = [];
+  const bushes: Part[] = [];
   const cones: Part[] = [];
 
   for (const t of trees) {
@@ -36,7 +40,7 @@ export function buildTrees(trees: TreeInstance[]): THREE.Group {
           const s = main ? 1 : rng.range(0.55, 0.75);
           const a = rng.range(0, Math.PI * 2);
           const off = main ? 0 : t.canopyRx * rng.range(0.35, 0.6);
-          blobs.push({
+          (main ? blobs : smallBlobs).push({
             x: t.x + Math.cos(a) * off,
             y: y0 + t.canopyY + (main ? 0 : rng.range(-0.3, 0.45) * t.canopyRy),
             z: t.z + Math.sin(a) * off,
@@ -68,7 +72,7 @@ export function buildTrees(trees: TreeInstance[]): THREE.Group {
         for (let i = 0; i < n; i++) {
           const a = rng.range(0, Math.PI * 2);
           const off = i === 0 ? 0 : t.canopyRx * 0.6;
-          blobs.push({
+          bushes.push({
             x: t.x + Math.cos(a) * off,
             y: y0 + t.canopyY * 0.8,
             z: t.z + Math.sin(a) * off,
@@ -87,13 +91,18 @@ export function buildTrees(trees: TreeInstance[]): THREE.Group {
   const group = new THREE.Group();
   const trunkGeo = new THREE.CylinderGeometry(0.7, 1, 1, 6).translate(0, 0.5, 0);
   const blobGeo = shadeByHeight(new THREE.IcosahedronGeometry(1, 1), 0.62, 1.08);
+  const lowBlobGeo = shadeByHeight(new THREE.IcosahedronGeometry(1, 0), 0.62, 1.08);
   const coneGeo = shadeByHeight(new THREE.ConeGeometry(1, 1, 7), 0.7, 1.05);
   const foliage = swayingMaterial();
   group.add(
     instanced(trunkGeo, trunks, new THREE.MeshLambertMaterial({ flatShading: true })),
     instanced(blobGeo, blobs, foliage),
+    instanced(lowBlobGeo, smallBlobs, foliage),
     instanced(coneGeo, cones, foliage),
   );
+  const bushMesh = instanced(lowBlobGeo, bushes, foliage);
+  bushMesh.castShadow = false;
+  group.add(bushMesh);
   group.userData.update = (t: number) => (foliage.userData.time.value = t);
   return group;
 }

@@ -94,27 +94,29 @@ export function buildDecor(hole: Hole): THREE.Group {
     if (surface(mx, my) !== 'rough' || !inPlay(mx, my)) continue;
     flowers.push({ x: mx, y: ground(mx, my) + rng.range(0.12, 0.22), z: -my, s: rng.range(0.045, 0.075), rot: 0, color: flowerColors[i % flowerColors.length] });
   }
-  group.add(instances(new THREE.IcosahedronGeometry(1, 0), lambert('#ffffff'), flowers));
+  // Tiny on screen, so an 8-triangle shape is plenty.
+  const speck = new THREE.OctahedronGeometry(1, 0);
+  group.add(instances(speck, lambert('#ffffff'), flowers));
 
   // Blackberries on the bramble bushes.
   const berries: Placement[] = [];
   for (const t of hole.trees) {
     if (t.kind !== 'bush') continue;
     const br = createRng(t.seed * 31 + 7);
-    for (let k = 0; k < 5; k++) {
+    for (let k = 0; k < 3; k++) {
       const a = br.range(0, Math.PI * 2);
       const up = br.range(0.1, 0.8);
       berries.push({
         x: t.x + Math.cos(a) * t.canopyRx * 0.95 * Math.cos(up),
         y: t.base + t.canopyY * 0.8 + t.canopyRy * Math.sin(up) * 0.9,
         z: t.z + Math.sin(a) * t.canopyRx * 0.95 * Math.cos(up),
-        s: 0.05,
+        s: 0.06,
         rot: 0,
         color: br.next() < 0.6 ? '#2a1330' : '#7a1f3d',
       });
     }
   }
-  group.add(instances(new THREE.IcosahedronGeometry(1, 0), lambert('#ffffff'), berries));
+  group.add(instances(speck, lambert('#ffffff'), berries));
 
   // Rocks scattered off the fairway.
   const rocks: Placement[] = [];

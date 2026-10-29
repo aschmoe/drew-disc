@@ -26,6 +26,8 @@ async function boot() {
   const hole = buildHole(def);
 
   const { scene, sun } = createScene(course.environment);
+  // Phones: a smaller shadow map is plenty at that screen size and saves GPU time.
+  if (Math.min(window.innerWidth, window.innerHeight) < 600) sun.shadow.mapSize.set(1024, 1024);
   const trees = buildTrees(hole.trees);
   const basket = placeBasket(hole);
   const flag = buildWindFlag(hole);
@@ -49,6 +51,8 @@ async function boot() {
   scene.add(jets.object);
 
   const game = new Game(hole, course, scene, camera, sun, ui, canvas, basket);
+  // Debug builds expose the renderer so draw calls and triangles can be checked from the console.
+  if (new URLSearchParams(location.search).has('debug')) (window as unknown as { renderer: THREE.WebGLRenderer }).renderer = renderer;
 
   // Sound starts on the first tap or key (browsers require a gesture).
   const sound = new Sound();
