@@ -33,8 +33,12 @@ export function buildBasket(): THREE.Group {
   cap.position.y = BASKET.bandTop + 0.06;
   g.add(band, cap);
 
-  // Chains: two rings of drooping strands from the band to the pole.
+  // Chains: two rings of drooping strands from the band to the pole. Each vertex remembers how far
+  // down its strand it is and which strand, so the chains can swing when a disc hits them.
   const pts: number[] = [];
+  const along: number[] = [];
+  const strand: number[] = [];
+  let strandIndex = 0;
   for (const [count, r] of [
     [16, BASKET.chainRadius],
     [10, BASKET.chainRadius * 0.55],
@@ -48,13 +52,38 @@ export function buildBasket(): THREE.Group {
           const rr = r * (1 - f) + 0.04 * f;
           const y = BASKET.bandTop - 0.06 - f * (BASKET.bandTop - 0.06 - BASKET.chainBottom) - Math.sin(f * Math.PI) * 0.04;
           pts.push(Math.cos(a) * rr, y, Math.sin(a) * rr);
+          along.push(Math.sin(f * Math.PI));
+          strand.push(strandIndex);
         }
       }
+      strandIndex++;
     }
   }
   const chainGeo = new THREE.BufferGeometry();
   chainGeo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
   g.add(new THREE.LineSegments(chainGeo, new THREE.LineBasicMaterial({ color: COLORS.chain })));
+
+  const rest = Float32Array.from(pts);
+  let energy = 0;
+  let push = new THREE.Vector2(1, 0);
+  let clock = 0;
+  /** Swing the chains: strength 0..1, pushed along a horizontal direction (basket-local x, z). */
+  g.userData.hitChains = (strength: number, dx = 1, dz = 0) => {
+    energy = Math.min(1.2, energy + strength);
+    push = new THREE.Vector2(dx, dz).normalize();
+  };
+  g.userData.update = (dt: number) => {
+    if (energy <= 0.001) return;
+    clock += dt;
+    energy *= Math.exp(-dt * 2.2);
+    const pos = chainGeo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const w = Math.sin(clock * 16 + strand[i] * 1.7) * 0.06 * energy * along[i];
+      const swing = Math.sin(clock * 7) * 0.05 * energy * along[i];
+      pos.setXYZ(i, rest[i * 3] + push.x * swing + w * 0.6, rest[i * 3 + 1], rest[i * 3 + 2] + push.y * swing + w * 0.4);
+    }
+    pos.needsUpdate = true;
+  };
 
   g.traverse((o) => {
     if (o instanceof THREE.Mesh) o.castShadow = true;
@@ -113,6 +142,34 @@ export function buildOBStakes(hole: Hole): THREE.Group {
   return g;
 }
 
+/** Paint a disc mesh: its color, a darker rim, and a white stamp off-center on top so you can see
+ *  it spin. */
+export function paintDisc(mesh: THREE.Mesh, color: string): void {
+  const geo = mesh.geometry;
+  const pos = geo.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  const base = new THREE.Color(color);
+  const rim = base.clone().multiplyScalar(0.72);
+  const stamp = new THREE.Color('#ffffff');
+  for (let f = 0; f < pos.count; f += 3) {
+    let x = 0;
+    let y = 0;
+    let z = 0;
+    for (let k = 0; k < 3; k++) {
+      x += pos.getX(f + k) / 3;
+      y += pos.getY(f + k) / 3;
+      z += pos.getZ(f + k) / 3;
+    }
+    const r = Math.hypot(x, z);
+    const a = Math.atan2(z, x);
+    let c = base;
+    if (r > 0.094) c = rim;
+    else if (y > 0.012 && r > 0.022 && r < 0.078 && a > 0.2 && a < 1.5) c = stamp;
+    for (let k = 0; k < 3; k++) colors.set([c.r, c.g, c.b], (f + k) * 3);
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+}
+
 /** A disc: a lathe profile, slightly domed. */
 export function buildDiscMesh(disc: Disc): THREE.Mesh {
   const profile = [
@@ -125,8 +182,9 @@ export function buildDiscMesh(disc: Disc): THREE.Mesh {
     [0.07, -0.004],
     [0, -0.004],
   ].map(([x, y]) => new THREE.Vector2(x, y));
-  const geo = new THREE.LatheGeometry(profile, 20);
-  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: disc.color, flatShading: true, side: THREE.DoubleSide }));
+  const geo = new THREE.LatheGeometry(profile, 28).toNonIndexed();
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide }));
+  paintDisc(mesh, disc.color);
   mesh.castShadow = true;
   return mesh;
 }

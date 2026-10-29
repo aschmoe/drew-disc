@@ -26,6 +26,7 @@ async function boot() {
 
   const { scene, sun } = createScene(course.environment);
   const trees = buildTrees(hole.trees);
+  const basket = placeBasket(hole);
   const flag = buildWindFlag(hole);
   const sky = buildSkyDressing(course.environment, def.tees[0].pos);
   scene.add(
@@ -34,7 +35,7 @@ async function boot() {
     buildPath(hole),
     trees,
     buildDecor(hole),
-    placeBasket(hole),
+    basket,
     buildTee(hole),
     buildTeeSign(hole),
     buildOBStakes(hole),
@@ -46,7 +47,7 @@ async function boot() {
   const jets = new JetFlyovers(new THREE.Vector3(b.x / 2, 0, b.z / 2), sun.position.clone().sub(sun.target.position).normalize());
   scene.add(jets.object);
 
-  const game = new Game(hole, course, scene, camera, sun, ui, canvas);
+  const game = new Game(hole, course, scene, camera, sun, ui, canvas, basket);
 
   const resize = () => {
     const w = window.innerWidth;

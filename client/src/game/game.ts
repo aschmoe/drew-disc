@@ -5,14 +5,15 @@ import * as THREE from 'three';
 import { DEFAULT_BAG, getDisc } from '@shared/discs';
 import type { CourseDef, Hole } from '../content/hole';
 import { dirToHeading, headingToDir } from '../sim/frame';
-import { simulateThrow, type FlightResult, type ThrowInput, type Wind } from '../sim/flight';
+import { fadeSide, simulateThrow, type FlightEvent, type FlightResult, type ThrowInput, type Wind } from '../sim/flight';
 import { createRng } from '../sim/rng';
 import { v3, type V3 } from '../sim/vec';
 import { Controls, type ThrowGesture } from '../ui/controls';
 import { DebugPanel } from '../ui/debugPanel';
 import { Overlay, type ThrowRecord } from '../ui/overlay';
 import { Character, RELEASE_AT, type ThrowAnim } from '../world/character';
-import { buildDiscMesh } from '../world/props';
+import { Effects } from '../world/effects';
+import { buildDiscMesh, paintDisc } from '../world/props';
 import { followSun } from '../world/scene';
 import { formatFeet, maxStrokes, scoreName } from './score';
 import { AIM_LIMIT, HYZER_LIMIT, MAX_POWER, type ShotSettings } from './settings';
@@ -68,6 +69,11 @@ export class Game {
   private camLook = new THREE.Vector3();
   private sunOffset: THREE.Vector3;
   private lastTrailIndex = -1;
+  private effects = new Effects();
+  private nextEvent = 0;
+  private spinAngle = 0;
+  /** Called as the flight playback reaches each event (landing, chains...), for sound. */
+  onFlightEvent: ((e: FlightEvent, speed: number) => void) | null = null;
 
   constructor(
     private hole: Hole,
@@ -77,6 +83,7 @@ export class Game {
     private sun: THREE.DirectionalLight,
     uiRoot: HTMLElement,
     canvas: HTMLElement,
+    private basket: THREE.Group,
   ) {
     const rng = createRng((Date.now() & 0xffff) ^ 0x5eed);
     const w = course.environment.wind;
@@ -108,7 +115,7 @@ export class Game {
     this.disc = buildDiscMesh(getDisc(this.settings.discId));
     this.preview = makeLine(0xffffff, 0.8, true);
     this.trail = makeLine(0xffffff, 0.45, false);
-    scene.add(this.thrower, this.disc, this.preview, this.trail, this.markers);
+    scene.add(this.thrower, this.disc, this.preview, this.trail, this.markers, this.effects.object);
     this.bindKeys();
     this.restart();
   }
@@ -229,7 +236,7 @@ export class Game {
     const s = this.settings;
     if (this.discId !== s.discId) {
       this.discId = s.discId;
-      (this.disc.material as THREE.MeshLambertMaterial).color.set(getDisc(s.discId).color);
+      paintDisc(this.disc, getDisc(s.discId).color);
       this.character.setDiscColor(getDisc(s.discId).color);
     }
     const aimDeg = this.basketHeading() + s.aimOffsetDeg;
@@ -301,11 +308,51 @@ export class Game {
     this.throwAnim = this.isPutt() ? 'putt' : this.settings.style;
     this.lookUntil = 0;
     this.lastTrailIndex = -1;
+    this.nextEvent = 0;
     this.preview.visible = false;
     this.trail.visible = true;
     this.overlay.setHint(null);
     this.controls.setEnabled(false);
     if (g.power > 1) this.overlay.showToast('Muscled it!', 1200);
+  }
+
+  /** Fire the effects for every flight event the playback has reached. */
+  private playEvents(t: number, discPos: THREE.Vector3): void {
+    const r = this.result!;
+    while (this.nextEvent < r.events.length && r.events[this.nextEvent].t <= t) {
+      const e = r.events[this.nextEvent++];
+      const speed = this.speedAt(e.t);
+      const b = this.hole.world.basket;
+      const toward = new THREE.Vector3(b.x - discPos.x, 0, b.z - discPos.z);
+      switch (e.kind) {
+        case 'ground':
+          this.effects.landingPuff(new THREE.Vector3(e.x, e.y, e.z), speed, r.restSurface === 'path' ? '#b9a888' : '#7da552');
+          break;
+        case 'chains':
+        case 'in-basket':
+        case 'spit-out':
+        case 'blow-through':
+          this.basket.userData.hitChains?.(Math.min(1, 0.35 + speed / 14), toward.x, toward.z);
+          break;
+        case 'band':
+        case 'cage':
+          this.basket.userData.hitChains?.(0.25, toward.x, toward.z);
+          break;
+      }
+      if (e.kind === 'in-basket' && this.strokes - this.hole.def.par <= -1) {
+        this.effects.celebrate(new THREE.Vector3(b.x, b.base, b.z), this.strokes === 1);
+      }
+      this.onFlightEvent?.(e, speed);
+    }
+  }
+
+  private speedAt(t: number): number {
+    const path = this.result!.path;
+    const i = Math.max(1, path.findIndex((p) => p.t >= t));
+    const a = path[i - 1];
+    const b = path[Math.min(i, path.length - 1)];
+    const dt = b.t - a.t;
+    return dt > 0 ? new THREE.Vector3().fromArray(b.p).distanceTo(new THREE.Vector3().fromArray(a.p)) / dt : 0;
   }
 
   private finishFlight(): void {
@@ -323,7 +370,8 @@ export class Game {
       record.outcome = this.strokes === 1 ? 'Ace!' : 'In';
       this.phase = 'holed';
       this.controls.setEnabled(false);
-      window.setTimeout(() => this.showCard(), 900);
+      // Let the chains and confetti have their moment before the card.
+      window.setTimeout(() => this.showCard(), 1800);
       return;
     }
     if (r.ob) {
@@ -373,6 +421,8 @@ export class Game {
   /** Advance one rendered frame. */
   tick(dt: number): void {
     this.now += dt;
+    this.effects.update(dt);
+    this.basket.userData.update?.(dt);
     if (this.keyCharge !== null) {
       this.keyCharge = Math.min(MAX_POWER, this.keyCharge + KEY_CHARGE_PER_SECOND * dt);
       this.controls.showPower(this.keyCharge);
@@ -405,12 +455,21 @@ export class Game {
       const pos = new THREE.Vector3().fromArray(a.p).lerp(new THREE.Vector3().fromArray(b.p), f);
       const normal = new THREE.Vector3().fromArray(a.n).lerp(new THREE.Vector3().fromArray(b.n), f).normalize();
       this.disc.position.copy(pos);
-      this.disc.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
+      // Spin about the disc's own axis (clockwise from above for a right-hand backhand), slowing
+      // as it slows, so the stamp turns.
+      const speed = new THREE.Vector3().fromArray(b.p).distanceTo(new THREE.Vector3().fromArray(a.p)) / Math.max(1e-3, b.t - a.t);
+      const resting = this.clock > end;
+      if (!resting) this.spinAngle -= fadeSide(this.throwAnim === 'forehand' ? 'forehand' : 'backhand', 'right') * dt * Math.min(16, 4 + speed * 0.6);
+      this.disc.quaternion
+        .setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal)
+        .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), this.spinAngle));
+      this.playEvents(t, pos);
       // Bigger in flight so it reads at a distance.
       this.disc.scale.setScalar(1 + Math.min(1.5, this.camera.position.distanceTo(pos) / 25));
 
       if (i !== this.lastTrailIndex) {
-        setLine(this.trail, path.slice(0, i + 1).map((p) => p.p));
+        // A short trail: the last 1.2 seconds of flight.
+        setLine(this.trail, path.slice(Math.max(0, i - 72), i + 1).map((p) => p.p));
         this.lastTrailIndex = i;
       }
 
