@@ -8,25 +8,50 @@ import { dirToHeading, headingToDir } from '../sim/frame';
 import { simulateThrow, type FlightResult, type ThrowInput, type Wind } from '../sim/flight';
 import { createRng } from '../sim/rng';
 import { v3, type V3 } from '../sim/vec';
-import { Hud, type ShotSettings } from '../ui/hud';
-import { buildDiscMesh, buildThrower } from '../world/props';
+import { Controls, type ThrowGesture } from '../ui/controls';
+import { DebugPanel } from '../ui/debugPanel';
+import { Overlay, type ThrowRecord } from '../ui/overlay';
+import { buildDiscMesh, buildThrower, poseThrower } from '../world/props';
 import { followSun } from '../world/scene';
 import { formatFeet, maxStrokes, scoreName } from './score';
+import { AIM_LIMIT, HYZER_LIMIT, MAX_POWER, type ShotSettings } from './settings';
 
 type Phase = 'aim' | 'flight' | 'holed';
 
 const CIRCLE_1 = 10; // meters, putting range
 const PREVIEW_FRACTION = 0.4;
+const LOOK_SECONDS = 3.5;
+const KEY_CHARGE_PER_SECOND = 0.75;
 
 export class Game {
   private phase: Phase = 'aim';
   private strokes = 0;
   private lie: V3 = v3();
   private result: FlightResult | null = null;
+  private resultDisc = '';
   private clock = 0;
   private wind: Wind;
-  private hud: Hud;
+  private settings: ShotSettings = {
+    discId: DEFAULT_BAG[1],
+    style: 'backhand',
+    power: 0.9,
+    aimOffsetDeg: 0,
+    hyzerDeg: 0,
+    fullPreview: false,
+  };
+  private pullPower: number | null = null;
+  private keyCharge: number | null = null;
+  private previewDirty = true;
+  private puttTarget: number | null = null;
+  private followClock = -1;
+  private lookUntil = 0;
+  private now = 0;
+  private throws: ThrowRecord[] = [];
+  private hasThrown = false;
 
+  private overlay: Overlay;
+  private controls: Controls;
+  private debug: DebugPanel | null = null;
   private thrower = buildThrower();
   private disc: THREE.Mesh;
   private discId = '';
@@ -45,20 +70,36 @@ export class Game {
     private camera: THREE.PerspectiveCamera,
     private sun: THREE.DirectionalLight,
     uiRoot: HTMLElement,
+    canvas: HTMLElement,
   ) {
     const rng = createRng((Date.now() & 0xffff) ^ 0x5eed);
     const w = course.environment.wind;
     this.wind = { speed: Number(rng.range(w.minSpeed, w.maxSpeed).toFixed(1)), towardDeg: Math.round(rng.range(0, 360)) };
     this.sunOffset = sun.position.clone().sub(sun.target.position);
 
-    this.hud = new Hud(uiRoot, DEFAULT_BAG, {
-      onChange: () => this.refresh(),
-      onThrow: () => this.throwDisc(),
-      onRestart: () => this.restart(),
-    });
+    this.overlay = new Overlay(uiRoot);
+    this.controls = new Controls(uiRoot, DEFAULT_BAG, {
+      settings: () => this.settings,
+      update: (p) => this.update(p),
+      pulling: (power) => {
+        this.pullPower = power;
+        this.previewDirty = true;
+      },
+      throwDisc: (g) => this.throwDisc(g),
+      look: () => this.look(),
+      aimBy: (d) => this.update({ aimOffsetDeg: this.settings.aimOffsetDeg + d }),
+    }, canvas);
+    if (new URLSearchParams(location.search).has('debug')) {
+      this.debug = new DebugPanel(uiRoot, {
+        settings: () => this.settings,
+        update: (p) => this.update(p),
+        throwClean: (power) => this.throwDisc({ power, flickDeg: 0, spin: 1 }),
+        restart: () => this.restart(),
+      });
+    }
 
-    this.disc = buildDiscMesh(getDisc(this.hud.settings.discId));
-    this.preview = makeLine(0xffffff, 0.75, true);
+    this.disc = buildDiscMesh(getDisc(this.settings.discId));
+    this.preview = makeLine(0xffffff, 0.8, true);
     this.trail = makeLine(0xffffff, 0.45, false);
     scene.add(this.thrower, this.disc, this.preview, this.trail, this.markers);
     this.bindKeys();
@@ -70,14 +111,29 @@ export class Game {
     const g = this.hole.world.groundHeight(tee.pos[0], -tee.pos[1]);
     this.lie = v3(tee.pos[0], g, -tee.pos[1]);
     this.strokes = 0;
+    this.throws = [];
     this.phase = 'aim';
     this.result = null;
     this.markers.clear();
     this.trail.visible = false;
-    this.hud.set({ aimOffsetDeg: 0, hyzerDeg: 0, power: 0.85, discId: DEFAULT_BAG[1] });
-    this.hud.setThrowEnabled(true);
+    this.overlay.hideScorecard();
+    this.settings = { ...this.settings, aimOffsetDeg: 0, hyzerDeg: 0, power: 0.9, discId: DEFAULT_BAG[1] };
+    this.controls.setEnabled(true);
+    this.enterAim();
     this.snapCamera();
-    this.refresh();
+  }
+
+  /** Apply a settings change from any control. */
+  private update(patch: Partial<ShotSettings>): void {
+    Object.assign(this.settings, patch);
+    const s = this.settings;
+    s.aimOffsetDeg = Math.max(-AIM_LIMIT, Math.min(AIM_LIMIT, s.aimOffsetDeg));
+    s.hyzerDeg = Math.max(-HYZER_LIMIT, Math.min(HYZER_LIMIT, s.hyzerDeg));
+    s.power = Math.max(0, Math.min(MAX_POWER, s.power));
+    this.controls.render();
+    this.debug?.render();
+    this.previewDirty = true;
+    this.refreshHeader();
   }
 
   // --- Shot setup -----------------------------------------------------------
@@ -96,7 +152,7 @@ export class Game {
     return this.basketDistance() <= CIRCLE_1;
   }
 
-  private shotInput(s: ShotSettings, seed: number): ThrowInput {
+  private shotInput(s: ShotSettings, power: number, seed: number, flickDeg = 0, spin = 1): ThrowInput {
     const putt = this.isPutt();
     const aimDeg = this.basketHeading() + s.aimOffsetDeg;
     const fwd = headingToDir(aimDeg);
@@ -106,62 +162,80 @@ export class Game {
       style: s.style,
       hand: 'right',
       mode: putt ? 'putt' : 'throw',
-      power: s.power,
+      power,
       aimDeg,
       hyzerDeg: putt ? 0 : s.hyzerDeg,
+      flickDeg,
+      spin,
       from: v3(this.lie.x + fwd.x * 0.4, this.lie.y + release, this.lie.z + fwd.z * 0.4),
       seed,
     };
   }
 
-  /** Re-run the preview and refresh the HUD after any change. */
-  private refresh(): void {
-    const s = this.hud.settings;
+  /** Set up for the next throw from the current lie. */
+  private enterAim(): void {
+    this.phase = 'aim';
+    const putt = this.isPutt();
+    if (putt) {
+      this.settings.discId = 'chain-seeker';
+      this.puttTarget = this.autoPuttPower('chain-seeker');
+      this.settings.power = this.puttTarget;
+    } else {
+      this.puttTarget = null;
+    }
+    this.settings.aimOffsetDeg = 0;
+    this.settings.hyzerDeg = 0;
+    this.controls.setPutting(putt, this.puttTarget);
+    this.controls.setEnabled(true);
+    this.controls.showPower(null);
+    this.overlay.setHint(this.hasThrown ? null : 'Drag the scene to aim. Pull the disc down, then flick up to throw.');
+    this.update({});
+  }
+
+  private refreshHeader(): void {
+    const dist = this.basketDistance();
+    this.overlay.setHeader(
+      `<b>${this.hole.def.name}</b> · Par ${this.hole.def.par}` +
+        `<span class="sep"></span>Throw <b>${this.strokes + 1}</b>` +
+        `<span class="sep"></span><b>${formatFeet(dist)}</b>` +
+        `<span class="sep"></span>Wind ${this.wind.speed} m/s ${windArrow(this.wind.towardDeg - this.basketHeading() - this.settings.aimOffsetDeg)}`,
+    );
+  }
+
+  private refreshPreview(): void {
+    const s = this.settings;
     if (this.discId !== s.discId) {
       this.discId = s.discId;
       (this.disc.material as THREE.MeshLambertMaterial).color.set(getDisc(s.discId).color);
     }
-    const dist = this.basketDistance();
-    this.hud.setHeader(
-      `<b>${this.hole.def.name}</b> · Par ${this.hole.def.par} · ${this.hole.def.lengthFt} ft` +
-        `<span class="sep"></span>Throw <b>${this.strokes + 1}</b>` +
-        `<span class="sep"></span><b>${formatFeet(dist)}</b> to pin` +
-        `<span class="sep"></span>Wind ${this.wind.speed} m/s ${windArrow(this.wind.towardDeg - this.basketHeading())}`,
-    );
-    this.hud.setMode(this.isPutt() ? 'Putting (Circle 1)' : `${getDisc(s.discId).name} · ${s.style}`);
-
-    // Thrower faces the aim line.
     const aimDeg = this.basketHeading() + s.aimOffsetDeg;
     this.thrower.position.set(this.lie.x, this.lie.y, this.lie.z);
     this.thrower.rotation.y = -THREE.MathUtils.degToRad(aimDeg);
-
     if (this.phase !== 'aim') return;
-    // Preview: a clean version of this throw (no muscle randomness), first part only.
-    const input = this.shotInput({ ...s, power: Math.min(s.power, 1) }, 1);
+
+    // Preview a clean version of the throw at the power being pulled (or the last power).
+    const power = Math.min(1, this.pullPower ?? this.keyCharge ?? s.power);
+    const input = this.shotInput(s, power, 1);
     const r = simulateThrow(input, this.hole.world, this.wind);
     const n = s.fullPreview ? r.path.length : Math.max(2, Math.floor(r.path.length * PREVIEW_FRACTION));
     setLine(this.preview, r.path.slice(0, n).map((p) => p.p));
     this.preview.visible = true;
-    this.placeDiscInHand(input);
-  }
-
-  private placeDiscInHand(input: ThrowInput): void {
     this.disc.position.set(input.from.x, input.from.y, input.from.z);
     this.disc.quaternion.identity();
     this.disc.scale.setScalar(1);
   }
 
   /**
-   * A starting power for a putt that arrives at the middle of the chains. The player can still
-   * adjust it; this just means a putt doesn't inherit the drive's power.
+   * A power for a putt that arrives at the middle of the chains. Shown as the tick on the power
+   * ring while putting, so a putt doesn't inherit the drive's power.
    */
   private autoPuttPower(discId: string): number {
     const b = this.hole.world.basket;
     const target = b.base + 1.05;
+    const dist = this.basketDistance();
     const heightAtBasket = (power: number) => {
-      const input = this.shotInput({ ...this.hud.settings, discId, power, aimOffsetDeg: 0 }, 1);
+      const input = this.shotInput({ ...this.settings, discId, aimOffsetDeg: 0 }, power, 1);
       const r = simulateThrow(input, { ...this.hole.world, basket: { ...b, z: b.z + 1e4 } }, this.wind);
-      const dist = this.basketDistance();
       for (const sample of r.path) {
         if (Math.hypot(sample.p[0] - input.from.x, sample.p[2] - input.from.z) >= dist - 0.2) return sample.p[1];
       }
@@ -177,70 +251,108 @@ export class Game {
     return Math.round(((lo + hi) / 2) * 100) / 100;
   }
 
+  private look(): void {
+    if (this.phase !== 'aim') return;
+    this.lookUntil = this.lookUntil > this.now ? 0 : this.now + LOOK_SECONDS;
+  }
+
   // --- Throwing --------------------------------------------------------------
 
-  private throwDisc(): void {
+  private throwDisc(g: ThrowGesture): void {
     if (this.phase !== 'aim') return;
     const seed = (Math.random() * 2 ** 32) >>> 0;
-    const input = this.shotInput(this.hud.settings, seed);
+    const input = this.shotInput(this.settings, g.power, seed, g.flickDeg, g.spin);
     this.result = simulateThrow(input, this.hole.world, this.wind);
+    this.resultDisc = this.settings.discId;
+    this.settings.power = Math.min(1, g.power);
     this.strokes++;
+    this.hasThrown = true;
     this.phase = 'flight';
     this.clock = 0;
+    this.followClock = 0;
+    this.lookUntil = 0;
     this.lastTrailIndex = -1;
     this.preview.visible = false;
     this.trail.visible = true;
-    this.hud.setThrowEnabled(false);
+    this.overlay.setHint(null);
+    this.controls.setEnabled(false);
+    if (g.power > 1) this.overlay.showToast('Muscled it!', 1200);
   }
 
   private finishFlight(): void {
     const r = this.result!;
-    const marker = buildDiscMesh(getDisc(this.hud.settings.discId));
+    const disc = getDisc(this.resultDisc);
+    const marker = buildDiscMesh(disc);
     marker.scale.setScalar(0.6);
     marker.position.set(this.lie.x, this.lie.y + 0.02, this.lie.z);
     this.markers.add(marker);
+    const traveled = Math.hypot(r.rest.x - this.lie.x, r.rest.z - this.lie.z);
+    const record: ThrowRecord = { disc: disc.name, color: disc.color, distance: traveled, outcome: '' };
+    this.throws.push(record);
 
     if (r.inBasket) {
+      record.outcome = this.strokes === 1 ? 'Ace!' : 'In';
       this.phase = 'holed';
-      this.hud.showToast(`${scoreName(this.strokes, this.hole.def.par)}  ${this.strokes} on a par ${this.hole.def.par}`, 6000);
-      this.hud.setThrowEnabled(false);
-      this.refresh();
+      this.controls.setEnabled(false);
+      window.setTimeout(() => this.showCard(), 900);
       return;
     }
     if (r.ob) {
       this.strokes++;
+      record.outcome = 'OB +1';
       this.lie = v3(r.lastInBounds.x, r.lastInBounds.y, r.lastInBounds.z);
-      this.hud.showToast('Out of bounds: +1, play from where it went out');
+      this.overlay.showToast('Out of bounds: +1, play from where it went out');
     } else {
-      this.lie = v3(r.rest.x, r.rest.y - 0.01, r.rest.z);
+      this.lie = v3(r.rest.x, r.rest.y - 0.012, r.rest.z);
       const hit = r.events.find((e) => e.kind === 'spit-out' || e.kind === 'blow-through' || e.kind === 'band' || e.kind === 'cage');
-      if (hit) this.hud.showToast(hit.kind === 'spit-out' ? 'Spit out!' : hit.kind === 'blow-through' ? 'Blew through the chains' : 'Off the cage');
-      else if (r.restSurface === 'bramble') this.hud.showToast('In the blackberries...');
+      const trees = r.events.filter((e) => e.kind === 'branch' || e.kind === 'trunk').length;
+      record.outcome = hit ? 'Chains' : r.restSurface === 'bramble' ? 'Brambles' : trees ? 'Trees' : '';
+      if (hit) this.overlay.showToast(hit.kind === 'spit-out' ? 'Spit out!' : hit.kind === 'blow-through' ? 'Blew through the chains' : 'Off the cage');
+      else if (r.restSurface === 'bramble') this.overlay.showToast('In the blackberries...');
+      else if (this.basketDistance() <= CIRCLE_1) this.overlay.showToast(`Circle 1, ${formatFeet(this.basketDistance())}`);
     }
     if (this.strokes >= maxStrokes(this.hole.def.par)) {
       this.phase = 'holed';
-      this.hud.showToast(`Picked up at ${this.strokes}`, 6000);
+      this.overlay.showToast(`Picked up at ${this.strokes}`, 2000);
+      window.setTimeout(() => this.showCard(), 900);
       return;
     }
-    this.phase = 'aim';
-    const putt = this.isPutt();
-    this.hud.set({
-      aimOffsetDeg: 0,
-      hyzerDeg: 0,
-      discId: putt ? 'chain-seeker' : this.hud.settings.discId,
-      ...(putt ? { power: this.autoPuttPower('chain-seeker') } : {}),
-    });
-    this.hud.setThrowEnabled(true);
-    this.refresh();
+    this.enterAim();
+  }
+
+  private showCard(): void {
+    const holed = this.result?.inBasket;
+    this.overlay.showScorecard(
+      {
+        title: holed ? scoreName(this.strokes, this.hole.def.par) : 'Picked up',
+        strokes: this.strokes,
+        par: this.hole.def.par,
+        holeName: `SeaTac ${this.hole.def.name}`,
+        throws: this.throws,
+      },
+      () => this.restart(),
+    );
   }
 
   // --- Frame update -----------------------------------------------------------
 
-  update(dt: number): void {
+  /** Advance one rendered frame. */
+  tick(dt: number): void {
+    this.now += dt;
+    if (this.keyCharge !== null) {
+      this.keyCharge = Math.min(MAX_POWER, this.keyCharge + KEY_CHARGE_PER_SECOND * dt);
+      this.controls.showPower(this.keyCharge);
+      this.previewDirty = true;
+    }
+    if (this.previewDirty) {
+      this.previewDirty = false;
+      this.refreshPreview();
+    }
+    this.animateThrower(dt);
+
     if (this.phase === 'flight' && this.result) {
       this.clock += dt;
-      const r = this.result;
-      const path = r.path;
+      const path = this.result.path;
       const end = path[path.length - 1].t;
       const t = Math.min(this.clock, end);
       let i = path.findIndex((p) => p.t >= t);
@@ -269,6 +381,9 @@ export class Game {
       this.moveCamera(want, pos, dt, 3);
 
       if (this.clock > end + 1.2) this.finishFlight();
+    } else if (this.lookUntil > this.now) {
+      const { pos, look } = this.lookCamera();
+      this.moveCamera(pos, look, dt, 2.2);
     } else {
       const { pos, look } = this.aimCamera();
       this.moveCamera(pos, look, dt, 4);
@@ -276,8 +391,23 @@ export class Game {
     followSun(this.sun, this.camLook, this.sunOffset);
   }
 
+  private animateThrower(dt: number): void {
+    const style = this.settings.style;
+    if (this.followClock >= 0) {
+      this.followClock += dt / 0.45;
+      poseThrower(this.thrower, 0, this.followClock, style);
+      if (this.followClock >= 1) {
+        this.followClock = -1;
+        poseThrower(this.thrower, 0, 0, style);
+      }
+      return;
+    }
+    const pull = this.pullPower ?? this.keyCharge;
+    poseThrower(this.thrower, pull === null ? 0 : Math.min(1, pull / MAX_POWER + 0.15), 0, style);
+  }
+
   private aimCamera(): { pos: THREE.Vector3; look: THREE.Vector3 } {
-    const aimDeg = this.basketHeading() + this.hud.settings.aimOffsetDeg;
+    const aimDeg = this.basketHeading() + this.settings.aimOffsetDeg;
     const fwd = headingToDir(aimDeg);
     const lie = new THREE.Vector3(this.lie.x, this.lie.y, this.lie.z);
     const putt = this.isPutt();
@@ -291,6 +421,15 @@ export class Game {
     }
     const ahead = putt ? this.basketDistance() : 35;
     const look = lie.clone().add(new THREE.Vector3(fwd.x * ahead, putt ? 1 : 2, fwd.z * ahead));
+    return { pos, look };
+  }
+
+  /** From behind the basket, looking back down the fairway at the lie. */
+  private lookCamera(): { pos: THREE.Vector3; look: THREE.Vector3 } {
+    const b = this.hole.world.basket;
+    const toBasket = new THREE.Vector3(b.x - this.lie.x, 0, b.z - this.lie.z).normalize();
+    const pos = new THREE.Vector3(b.x, b.base + 3.2, b.z).addScaledVector(toBasket, 7);
+    const look = new THREE.Vector3(this.lie.x, this.lie.y + 1, this.lie.z).lerp(new THREE.Vector3(b.x, b.base, b.z), 0.55);
     return { pos, look };
   }
 
@@ -324,19 +463,29 @@ export class Game {
 
   private bindKeys(): void {
     window.addEventListener('keydown', (e) => {
-      const s = this.hud.settings;
+      const s = this.settings;
       const bag = DEFAULT_BAG;
-      if (e.key === 'ArrowLeft') this.hud.update({ aimOffsetDeg: Math.max(-40, s.aimOffsetDeg - 0.5) });
-      else if (e.key === 'ArrowRight') this.hud.update({ aimOffsetDeg: Math.min(40, s.aimOffsetDeg + 0.5) });
-      else if (e.key === 'ArrowUp' || e.key === 'w') this.hud.update({ hyzerDeg: Math.max(-35, s.hyzerDeg - 1) });
-      else if (e.key === 'ArrowDown' || e.key === 's') this.hud.update({ hyzerDeg: Math.min(35, s.hyzerDeg + 1) });
-      else if (e.key === 'f') this.hud.update({ style: s.style === 'backhand' ? 'forehand' : 'backhand' });
-      else if (e.key >= '1' && e.key <= String(bag.length)) this.hud.update({ discId: bag[Number(e.key) - 1] });
-      else if (e.key === ' ') {
+      if (e.key === ' ') {
         e.preventDefault();
-        this.throwDisc();
-      } else if (e.key === 'r') this.restart();
-      else return;
+        // Hold space to charge, release to throw (a clean release; the flick is touch/mouse only).
+        if (!e.repeat && this.phase === 'aim' && this.keyCharge === null) this.keyCharge = 0;
+        return;
+      }
+      if (e.key === 'ArrowLeft' || e.key === 'a') this.update({ aimOffsetDeg: s.aimOffsetDeg - 0.5 });
+      else if (e.key === 'ArrowRight' || e.key === 'd') this.update({ aimOffsetDeg: s.aimOffsetDeg + 0.5 });
+      else if (e.key === 'ArrowUp' || e.key === 'w') this.update({ hyzerDeg: s.hyzerDeg - 1 });
+      else if (e.key === 'ArrowDown' || e.key === 's') this.update({ hyzerDeg: s.hyzerDeg + 1 });
+      else if (e.key === 'f') this.update({ style: s.style === 'backhand' ? 'forehand' : 'backhand' });
+      else if (e.key === 'l') this.look();
+      else if (e.key >= '1' && e.key <= String(bag.length)) this.update({ discId: bag[Number(e.key) - 1] });
+      else if (e.key === 'r') this.restart();
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key !== ' ' || this.keyCharge === null) return;
+      const power = this.keyCharge;
+      this.keyCharge = null;
+      this.controls.showPower(null);
+      if (power > 0.05) this.throwDisc({ power, flickDeg: 0, spin: 0.95 });
     });
   }
 }

@@ -137,21 +137,51 @@ export function buildDiscMesh(disc: Disc): THREE.Mesh {
   return mesh;
 }
 
-/** Placeholder thrower until the rigged character arrives in the art pass. */
+/** Placeholder thrower until the rigged character arrives in the art pass. The upper body and
+ *  throwing arm are separate pivots so poseThrower can wind up and follow through. */
 export function buildThrower(shirt: string = COLORS.shirt): THREE.Group {
   const g = new THREE.Group();
   const legs = new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 0.55, 4, 8), lambert(COLORS.shorts));
   legs.position.y = 0.45;
+
+  const upper = new THREE.Group();
+  upper.name = 'upper';
+  upper.position.y = 0.8;
   const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.45, 4, 8), lambert(shirt));
-  body.position.y = 1.1;
+  body.position.y = 0.3;
   const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.15, 1), lambert(COLORS.skin));
-  head.position.y = 1.62;
+  head.position.y = 0.82;
+  const shoulder = new THREE.Group();
+  shoulder.name = 'arm';
+  shoulder.position.set(0.27, 0.55, 0);
   const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.5, 4, 6), lambert(shirt));
-  arm.position.set(0.28, 1.15, 0.1);
-  arm.rotation.x = -0.9;
-  g.add(legs, body, head, arm);
+  arm.position.y = -0.3;
+  shoulder.add(arm);
+  upper.add(body, head, shoulder);
+
+  g.add(legs, upper);
   g.traverse((o) => {
     if (o instanceof THREE.Mesh) o.castShadow = true;
   });
+  poseThrower(g, 0, 0, 'backhand');
   return g;
+}
+
+/**
+ * Pose the thrower. reach: 0 = standing, 1 = full reach-back. follow: 0..1 through the release
+ * and follow-through. Backhand coils one way, forehand the other.
+ */
+export function poseThrower(g: THREE.Group, reach: number, follow: number, style: 'backhand' | 'forehand'): void {
+  const upper = g.getObjectByName('upper')!;
+  const arm = g.getObjectByName('arm')!;
+  const dir = style === 'backhand' ? 1 : -1;
+  // Coil, then unwind past square on the follow-through.
+  const swing = follow > 0 ? Math.sin(Math.min(1, follow) * Math.PI * 0.5) : 0;
+  const coil = reach * (1 - swing) - swing * 0.9;
+  upper.rotation.y = dir * coil * 1.1;
+  // Arm: hangs at rest, swings out level for the reach and the release.
+  const lift = Math.max(reach, swing > 0 ? 1 - Math.abs(swing - 0.5) : 0);
+  arm.rotation.z = lift * 1.45 * (style === 'backhand' ? 1 : 0.9);
+  arm.rotation.x = -0.25 - lift * 0.2;
+  arm.rotation.y = style === 'backhand' ? reach * 0.9 * (1 - swing) : -reach * 0.4;
 }

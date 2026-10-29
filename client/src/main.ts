@@ -25,7 +25,7 @@ async function boot() {
   const { scene, sun } = createScene(course.environment);
   scene.add(buildGround(hole), buildPath(hole), buildTrees(hole.trees), placeBasket(hole), buildTee(hole), buildOBStakes(hole));
 
-  const game = new Game(hole, course, scene, camera, sun, ui);
+  const game = new Game(hole, course, scene, camera, sun, ui, canvas);
 
   const resize = () => {
     const w = window.innerWidth;
@@ -34,10 +34,8 @@ async function boot() {
     camera.aspect = w / h;
     // Portrait phones get a wider vertical field of view so the fairway still fits.
     camera.fov = w < h ? 70 : 55;
-    // Shift the picture up so the action sits above the control panel.
-    const panel = ui.querySelector('.panel') as HTMLElement | null;
-    const lift = panel ? Math.min(panel.offsetHeight * 0.45, h * 0.25) : 0;
-    camera.setViewOffset(w, h, 0, lift, w, h);
+    // Shift the picture up a little so the thrower sits above the throw pad.
+    camera.setViewOffset(w, h, 0, h * 0.12, w, h);
     camera.updateProjectionMatrix();
   };
   window.addEventListener('resize', resize);
@@ -47,7 +45,7 @@ async function boot() {
   renderer.setAnimationLoop((now) => {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    game.update(dt);
+    game.tick(dt);
     renderer.render(scene, camera);
   });
 

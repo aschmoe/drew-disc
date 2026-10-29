@@ -374,7 +374,7 @@ The repo stays public (decided); the link is shared with Drew when it's ready.
 | # | Target | What ships |
 |---|---|---|
 | 1 | Nov 5 | Repo scaffold, static deploy live, greybox hole 1, first flight model with the flight lab (**built**, deploy waiting on server setup) |
-| 2 | Nov 12 | Controls (pull and flick, angle, bag), basket catching, putting, OB, scoring: **playable greybox**, first playtest with you |
+| 2 | Nov 12 | Controls (pull and flick, angle, bag), basket catching, putting, OB, scoring: **playable greybox**, first playtest with you (**built**; debug sliders at `?debug`) |
 | 3 | Nov 19 | Art pass: terrain, firs, sky and fog, thrower and animations, jets, sound |
 | 4 | Nov 26 | Backend: leaderboards, share cards, results screen |
 | 5 | Dec 3 | Real-time multiplayer rooms |
