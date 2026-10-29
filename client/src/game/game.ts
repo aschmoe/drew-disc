@@ -470,7 +470,7 @@ export class Game {
       const look = new THREE.Vector3(b.x, b.base + 0.55, b.z).lerp(lie.clone().add(new THREE.Vector3(fwd.x * this.basketDistance(), 0.55, fwd.z * this.basketDistance())), 0.5);
       return { pos, look };
     }
-    const look = lie.clone().add(new THREE.Vector3(fwd.x * 35, 2, fwd.z * 35));
+    const look = lie.clone().add(new THREE.Vector3(fwd.x * 35, 5, fwd.z * 35));
     return { pos, look };
   }
 

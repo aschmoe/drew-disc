@@ -5,6 +5,7 @@ import { createScene } from './world/scene';
 import { buildDecor, buildSkyDressing, buildTeeSign, buildWindFlag } from './world/decor';
 import { buildGround, buildOuterGround, buildPath } from './world/terrain';
 import { buildTrees } from './world/trees';
+import { JetFlyovers } from './world/jets';
 import { buildOBStakes, buildTee, placeBasket } from './world/props';
 
 async function boot() {
@@ -41,6 +42,10 @@ async function boot() {
     sky.object,
   );
 
+  const b = hole.world.basket;
+  const jets = new JetFlyovers(new THREE.Vector3(b.x / 2, 0, b.z / 2), sun.position.clone().sub(sun.target.position).normalize());
+  scene.add(jets.object);
+
   const game = new Game(hole, course, scene, camera, sun, ui, canvas);
 
   const resize = () => {
@@ -66,6 +71,7 @@ async function boot() {
     trees.userData.update?.(t);
     flag.update(t, game.windNow);
     sky.update(t, game.windNow);
+    jets.update(dt);
     renderer.render(scene, camera);
   });
 
