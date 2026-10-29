@@ -9,6 +9,8 @@ export interface DebugHandlers {
   update(patch: Partial<ShotSettings>): void;
   throwClean(power: number): void;
   restart(): void;
+  /** Move the lie to this many meters short of the basket. */
+  jumpTo(metersFromBasket: number): void;
 }
 
 export class DebugPanel {
@@ -53,7 +55,11 @@ export class DebugPanel {
     restart.onclick = () => this.h.restart();
     const go = el('button', 'pill throw-clean', 'Throw clean');
     go.onclick = () => this.h.throwClean(this.h.settings().power);
-    buttons.append(line, restart, go);
+    const putt = el('button', 'pill', 'Putt 6 ft');
+    putt.onclick = () => this.h.jumpTo(1.85);
+    const approach = el('button', 'pill', 'Approach 60 ft');
+    approach.onclick = () => this.h.jumpTo(18);
+    buttons.append(line, restart, putt, approach, go);
     this.panel.append(buttons);
     root.append(this.panel);
     this.render();

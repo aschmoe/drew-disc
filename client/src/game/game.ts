@@ -95,6 +95,7 @@ export class Game {
         update: (p) => this.update(p),
         throwClean: (power) => this.throwDisc({ power, flickDeg: 0, spin: 1 }),
         restart: () => this.restart(),
+        jumpTo: (m) => this.jumpTo(m),
       });
     }
 
@@ -119,6 +120,22 @@ export class Game {
     this.overlay.hideScorecard();
     this.settings = { ...this.settings, aimOffsetDeg: 0, hyzerDeg: 0, power: 0.9, discId: DEFAULT_BAG[1] };
     this.controls.setEnabled(true);
+    this.enterAim();
+    this.snapCamera();
+  }
+
+  /** Debug: put the lie on the tee-to-basket line, this many meters short of the basket. */
+  private jumpTo(metersFromBasket: number): void {
+    if (this.phase === 'flight') return;
+    const tee = this.hole.def.tees[0];
+    const b = this.hole.world.basket;
+    const teeW = v3(tee.pos[0], 0, -tee.pos[1]);
+    const d = Math.hypot(b.x - teeW.x, b.z - teeW.z);
+    const f = Math.max(0, (d - metersFromBasket) / d);
+    const x = teeW.x + (b.x - teeW.x) * f;
+    const z = teeW.z + (b.z - teeW.z) * f;
+    this.lie = v3(x, this.hole.world.groundHeight(x, z), z);
+    this.overlay.hideScorecard();
     this.enterAim();
     this.snapCamera();
   }
@@ -409,18 +426,28 @@ export class Game {
   private aimCamera(): { pos: THREE.Vector3; look: THREE.Vector3 } {
     const aimDeg = this.basketHeading() + this.settings.aimOffsetDeg;
     const fwd = headingToDir(aimDeg);
+    const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
     const lie = new THREE.Vector3(this.lie.x, this.lie.y, this.lie.z);
     const putt = this.isPutt();
-    const up = putt ? 1.8 : 2.6;
+    // Over the thrower's right shoulder, so they stand to one side of the view instead of in
+    // front of the basket. Further to the side when putting, where the basket is close.
+    const up = putt ? 1.55 : 2.6;
+    const side = putt ? 1.15 : 0.9;
+    let back = putt ? 2.6 : 5.5;
+    const at = (b: number, u: number) => lie.clone().addScaledVector(right, side).add(new THREE.Vector3(-fwd.x * b, u, -fwd.z * b));
     // Back the camera off behind the thrower, but not into a tree.
-    let back = putt ? 3 : 5.5;
-    let pos = lie.clone().add(new THREE.Vector3(-fwd.x * back, up, -fwd.z * back));
+    let pos = at(back, up);
     while (back > 1.2 && this.insideTree(pos)) {
       back -= 0.5;
-      pos = lie.clone().add(new THREE.Vector3(-fwd.x * back, up * 0.85, -fwd.z * back));
+      pos = at(back, up * 0.85);
     }
-    const ahead = putt ? this.basketDistance() : 35;
-    const look = lie.clone().add(new THREE.Vector3(fwd.x * ahead, putt ? 1 : 2, fwd.z * ahead));
+    if (putt) {
+      const b = this.hole.world.basket;
+      // Look at the chains, nudged toward the aim line so aiming still moves the view.
+      const look = new THREE.Vector3(b.x, b.base + 0.55, b.z).lerp(lie.clone().add(new THREE.Vector3(fwd.x * this.basketDistance(), 0.55, fwd.z * this.basketDistance())), 0.5);
+      return { pos, look };
+    }
+    const look = lie.clone().add(new THREE.Vector3(fwd.x * 35, 2, fwd.z * 35));
     return { pos, look };
   }
 

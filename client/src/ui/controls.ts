@@ -4,12 +4,14 @@
 // - Bag (bottom left): pick a disc.  Style (bottom right): backhand / forehand.
 // - Angle (right edge): drag up for anhyzer, down for hyzer. Hidden while putting.
 // - Throw pad: put a thumb on the disc and PULL DOWN to set power (the ring fills; the green
-//   band is the sweet spot, red is muscling it), then FLICK UP to release. A crooked flick pulls
-//   or pushes the throw; a fast flick is a cleaner release. Letting go without a flick cancels.
+//   band is the sweet spot, red is muscling it), then FLICK UP to release. Easing back up lowers
+//   the power; only a quick flick throws. A crooked flick pulls or pushes the throw, and a faster
+//   flick is a cleaner release. Letting go without a flick cancels.
 
 import { DISCS } from '@shared/discs';
 import { HYZER_LIMIT, MAX_POWER, type ShotSettings } from '../game/settings';
 import { el, svg } from './dom';
+import { FlickGesture } from './gesture';
 
 export interface ThrowGesture {
   power: number;
@@ -162,74 +164,51 @@ export class Controls {
   }
 
   private bindPad(): void {
-    let start: { x: number; y: number } | null = null;
-    let maxPull = 0;
-    let lowest = { x: 0, y: 0 };
-    let samples: { t: number; x: number; y: number }[] = [];
     const fullPull = () => Math.min(230, Math.max(110, window.innerHeight * 0.2));
+    const gesture = new FlickGesture(fullPull());
+    const reset = () => {
+      this.padDisc.style.transform = '';
+      this.showPower(null);
+      this.h.pulling(null);
+    };
 
     this.pad.addEventListener('pointerdown', (e) => {
       if (!this.enabled) return;
       e.preventDefault();
       this.pad.setPointerCapture(e.pointerId);
-      start = { x: e.clientX, y: e.clientY };
-      lowest = { ...start };
-      maxPull = 0;
-      samples = [{ t: e.timeStamp, x: e.clientX, y: e.clientY }];
+      gesture.down(e.timeStamp, e.clientX, e.clientY, fullPull());
       this.showPower(0);
       this.h.pulling(0);
     });
 
     this.pad.addEventListener('pointermove', (e) => {
-      if (!start) return;
-      samples.push({ t: e.timeStamp, x: e.clientX, y: e.clientY });
-      if (samples.length > 40) samples.shift();
-      const pull = Math.max(0, e.clientY - start.y);
-      if (pull >= maxPull) {
-        maxPull = pull;
-        lowest = { x: e.clientX, y: e.clientY };
+      const ev = gesture.move(e.timeStamp, e.clientX, e.clientY);
+      if (!ev) return;
+      if (ev.kind === 'pull') {
+        // The disc follows the thumb while pulling.
+        this.padDisc.style.transform = `translate(${ev.dx * 0.3}px, ${Math.min(ev.dy, fullPull() * MAX_POWER)}px)`;
+        this.showPower(ev.power);
+        this.h.pulling(ev.power);
+      } else {
+        reset();
+        if (ev.kind === 'throw') this.h.throwDisc(ev);
       }
-      const power = Math.min(MAX_POWER, maxPull / fullPull());
-      // The disc follows the thumb down while pulling.
-      this.padDisc.style.transform = `translate(${(e.clientX - start.x) * 0.3}px, ${Math.min(pull, fullPull() * MAX_POWER)}px)`;
-      this.showPower(power);
-      this.h.pulling(power);
     });
 
-    const finish = (e: PointerEvent, cancelled: boolean) => {
-      if (!start) return;
-      samples.push({ t: e.timeStamp, x: e.clientX, y: e.clientY });
-      const power = Math.min(MAX_POWER, maxPull / fullPull());
-      start = null;
-      this.padDisc.style.transform = '';
-      this.showPower(null);
-      this.h.pulling(null);
-      if (cancelled || power < 0.05) return;
-
-      // Flick: how far it came back up from the lowest point, and how fast. Any clear upward
-      // flick throws; a lazy one just releases with less spin.
-      const last = samples[samples.length - 1];
-      const rise = lowest.y - last.y;
-      if (rise < 30) {
-        this.flashHint();
-        return;
-      }
-      const from = samples.find((s) => s.y === lowest.y && s.x === lowest.x) ?? samples[0];
-      const dt = Math.max(16, last.t - from.t) / 1000;
-      const speed = Math.hypot(last.x - lowest.x, rise) / dt;
-      const flickAngle = (Math.atan2(last.x - lowest.x, rise) * 180) / Math.PI;
-      this.h.throwDisc({
-        power,
-        flickDeg: Math.max(-10, Math.min(10, flickAngle * 0.3)),
-        spin: Math.max(0.55, Math.min(1, 0.55 + (speed - 450) / 2500)),
-      });
-    };
-    this.pad.addEventListener('pointerup', (e) => finish(e, false));
-    this.pad.addEventListener('pointercancel', (e) => finish(e, true));
+    this.pad.addEventListener('pointerup', () => {
+      const ev = gesture.up();
+      if (!ev) return;
+      reset();
+      if (ev.kind === 'cancel' && ev.hint) this.flashHint();
+    });
+    this.pad.addEventListener('pointercancel', () => {
+      gesture.cancel();
+      reset();
+    });
   }
 
   private flashHint(): void {
-    this.padLabel.textContent = 'Flick up to throw';
+    this.padLabel.textContent = 'Flick up fast to throw';
     this.pad.classList.add('nudge');
     window.setTimeout(() => this.pad.classList.remove('nudge'), 600);
   }
