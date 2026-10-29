@@ -169,19 +169,34 @@ export function buildThrower(shirt: string = COLORS.shirt): THREE.Group {
 
 /**
  * Pose the thrower. reach: 0 = standing, 1 = full reach-back. follow: 0..1 through the release
- * and follow-through. Backhand coils one way, forehand the other.
+ * and follow-through. Arm directions are an azimuth in the torso's frame (0 = straight ahead,
+ * +90 = the thrower's right) and an angle below horizontal.
+ *
+ * Right-hand backhand: the torso coils to the left and the arm reaches back across the body to
+ * the left, then sweeps across the chest and out to the right. Right-hand forehand: the torso
+ * turns a little right and the arm reaches back on the right side, then comes forward and across.
  */
 export function poseThrower(g: THREE.Group, reach: number, follow: number, style: 'backhand' | 'forehand'): void {
   const upper = g.getObjectByName('upper')!;
   const arm = g.getObjectByName('arm')!;
-  const dir = style === 'backhand' ? 1 : -1;
-  // Coil, then unwind past square on the follow-through.
-  const swing = follow > 0 ? Math.sin(Math.min(1, follow) * Math.PI * 0.5) : 0;
-  const coil = reach * (1 - swing) - swing * 0.9;
-  upper.rotation.y = dir * coil * 1.1;
-  // Arm: hangs at rest, swings out level for the reach and the release.
-  const lift = Math.max(reach, swing > 0 ? 1 - Math.abs(swing - 0.5) : 0);
-  arm.rotation.z = lift * 1.45 * (style === 'backhand' ? 1 : 0.9);
-  arm.rotation.x = -0.25 - lift * 0.2;
-  arm.rotation.y = style === 'backhand' ? reach * 0.9 * (1 - swing) : -reach * 0.4;
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+  const bh = style === 'backhand';
+  let torso: number;
+  let az: number;
+  let el: number;
+  if (follow > 0) {
+    const s = Math.sin(Math.min(1, follow) * Math.PI * 0.5);
+    torso = bh ? lerp(1.1, -0.5, s) : lerp(-0.6, 0.7, s);
+    az = bh ? lerp(-110, 100, s) : lerp(130, -40, s);
+    el = bh ? lerp(15, 30, s) : lerp(20, 35, s);
+  } else {
+    torso = bh ? 1.1 * reach : -0.6 * reach;
+    az = bh ? lerp(10, -110, reach) : lerp(10, 130, reach);
+    el = lerp(78, bh ? 15 : 20, reach);
+  }
+  upper.rotation.y = torso;
+  const a = THREE.MathUtils.degToRad(az);
+  const e = THREE.MathUtils.degToRad(el);
+  const dir = new THREE.Vector3(Math.sin(a) * Math.cos(e), -Math.sin(e), -Math.cos(a) * Math.cos(e));
+  arm.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir);
 }
