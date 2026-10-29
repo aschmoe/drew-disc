@@ -74,6 +74,8 @@ export class Game {
   private spinAngle = 0;
   /** Called as the flight playback reaches each event (landing, chains...), for sound. */
   onFlightEvent: ((e: FlightEvent, speed: number) => void) | null = null;
+  /** Called on a birdie or better, as the disc hits the chains. */
+  onCelebrate: ((ace: boolean) => void) | null = null;
 
   constructor(
     private hole: Hole,
@@ -341,6 +343,7 @@ export class Game {
       }
       if (e.kind === 'in-basket' && this.strokes - this.hole.def.par <= -1) {
         this.effects.celebrate(new THREE.Vector3(b.x, b.base, b.z), this.strokes === 1);
+        this.onCelebrate?.(this.strokes === 1);
       }
       this.onFlightEvent?.(e, speed);
     }
