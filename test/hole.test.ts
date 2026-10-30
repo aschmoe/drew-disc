@@ -21,7 +21,7 @@ describe('SeaTac hole 1', () => {
     expect(buildHole(def).trees).toEqual(hole.trees);
   });
 
-  it('keeps trunks off both ways round the big trees', () => {
+  it('keeps trunks off both gaps', () => {
     const routes = {
       gap: [[0, 5], [1, 30], [3, 55], [4, 66], [3.6, 74], [2.2, 82], [0.5, 92], [0, 105]],
       right: [[1, 10], [8, 30], [13, 50], [14.5, 65], [15, 80], [13, 92], [6, 104]],
@@ -74,9 +74,10 @@ describe('SeaTac hole 1', () => {
       expect(fromBasket(r)).toBeLessThan(10);
     });
 
-    it('goes round the right of the right big tree and gets close', () => {
+    it('threads the second gap, right of the right big tree, and gets close', () => {
       const r = shot({ discId: 'birthday-boy', style: 'backhand', power: 0.9, aimDeg: 10, hyzerDeg: 0 });
-      expect(crossing(r, 83.8)[0]).toBeGreaterThan(12);
+      expect(crossing(r, 72)[0]).toBeLessThan(17.4); // left of the tree right of the gap
+      expect(crossing(r, 83.8)[0]).toBeGreaterThan(12); // right of the right big tree
       expect(fromBasket(r)).toBeLessThan(10);
     });
 

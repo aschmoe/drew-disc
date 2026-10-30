@@ -72,9 +72,10 @@ playthrough (youtube.com/watch?v=3KfmGowbGio, 0:23). Numbers are estimates.
   lean out over the right side of the lane, so a high anhyzer line gets clipped early.
 - **The feature: two big trees** stand between the lane and the basket, 65 to 90 m out. The left
   one is square on the tee line, so the straight shot is blocked. A **row of little trees** runs
-  off to the left of it, closing that side, so there are **two ways round**: through the ~5 m gap
-  between the big trees (an anhyzer that turns through and fades back in works well), or right of
-  the right tree through the open strip and back left to the basket (longer, but more room).
+  off to the left of it, closing that side, and a third big tree stands right of the right one,
+  so from the tee there are **two gaps to hit**: the ~5 m gap between the big trees (an anhyzer
+  that turns through and fades back in works well), or the ~5 m gap between the right big tree
+  and the tree right of it, then back left to the basket (longer).
 - **Around the basket:** a big open space, roughly 24 m left to 30 m right of the pin.
 - **Flat**, as far as the video shows. Overcast PNW sky.
 - The video confirms **multiple pin positions** for this hole.
@@ -83,7 +84,7 @@ playthrough (youtube.com/watch?v=3KfmGowbGio, 0:23). Numbers are estimates.
               N  (+z)
    woods     open  [C]  open   ### z 90-130  open space round the basket
    ####       .    .     .   ####
-   ###  ....  (L)  :  (R)  .  ###  z 65-90   two big trees: through the gap or right of (R)
+   ###  ....  (L)  :  (R)  . (T) z 65-90   two gaps: (L)-(R) or (R)-(T)
    ##  oooo    .   :   ##   .  ##  z 64-72   row of little trees (o) closes the left side
    bramble    :|:          ######
    ,,,,,,,    :|:  lane     #####  z 20-60   bramble left, wide open lane, path up the middle
@@ -106,7 +107,8 @@ lives in `client/src/sim/frame.ts`.
 | Left big tree | (-0.9, 73.6), on the tee line |
 | Right big tree | (+7.8, 83.8); ~5 m gap to the left tree |
 | Row of little trees | (-15, 64) to (-5, 72) |
-| Way round the right | x +13 to +20, z 56 to 90 |
+| Tree right of the second gap | (+22, 72) |
+| Second gap | x +13 to +17, z 66 to 90 |
 | Open space round the basket | x -24 to +30, z 72 to 129 |
 | Gravel path | up the lane, through the gap, to the basket |
 | Left bramble and brush (heavy rough) | x -46 to -7, z 2 to 60 |

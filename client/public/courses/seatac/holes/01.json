@@ -7,7 +7,7 @@
   "_notes": [
     "MAP frame: meters, x = east, y = north. Tee at the origin, throwing north.",
     "Layout traced from a marked-up UDisc satellite view (about 0.089 m/px, scaled off the 360 ft tee-to-C line) and the Santtu Disc Golf tee shot. Estimates; see docs/DESIGN.md section 3.",
-    "The feature: two big trees stand between the lane and the basket, the left one on the tee line. A row of little trees closes off the left side, so there are two ways round: through the gap between the big trees, or right of the right one and back.",
+    "The feature: two big trees stand between the lane and the basket, the left one on the tee line. A row of little trees closes off the left side and another big tree stands right of the right one, so there are two gaps to hit: between the big trees, or between the right big tree and the tree right of it.",
     "Surfaces: later entries win. Anything not covered is defaultSurface."
   ],
   "bounds": {"minX": -75, "maxX": 70, "minY": -32, "maxY": 150},
@@ -42,6 +42,8 @@
     {"kind": "young", "pos": [-9.8, 47], "height": 8, "canopyRadius": 2.2},
     {"kind": "leafy", "pos": [-0.9, 73.6], "height": 18, "canopyRadius": 4.4, "_note": "left big tree, square on the tee line"},
     {"kind": "leafy", "pos": [7.8, 83.8], "height": 19, "canopyRadius": 4.8, "_note": "right big tree; the gap between the two is about 5 m"},
+    {"kind": "leafy", "pos": [22, 72], "height": 18, "canopyRadius": 4.6, "_note": "right post of the second gap: the way round the right big tree runs between the two"},
+    {"kind": "leafy", "pos": [27.5, 82], "height": 17, "canopyRadius": 4.6},
     {"kind": "leafy", "pos": [-19, 63], "height": 17, "canopyRadius": 4.6, "_note": "woods past the end of the little trees, so the left side stays closed"},
     {"kind": "leafy", "pos": [-24.5, 68], "height": 18, "canopyRadius": 4.8},
     {"kind": "leafy", "pos": [-28, 61], "height": 16, "canopyRadius": 4.4},
@@ -69,7 +71,7 @@
   "clearings": [
     {"_note": "tee and the open lane, a few meters wider than the mown grass so canopies don't close it", "polygon": [[-3, -4], [3, -4], [3, 12], [8, 24], [17.6, 26], [17.6, 57], [17, 62], [13.5, 68], [9, 74], [4, 66], [-3, 66], [-10.5, 62], [-10.5, 46], [-8, 26], [-6, 17], [-3, 12]]},
     {"_note": "the gap between the big trees", "polygon": [[-2, 64], [9.5, 64], [9.5, 75], [5, 82], [3, 93], [-4, 93], [-2, 80], [3, 74]]},
-    {"_note": "the way round the right of the right big tree", "polygon": [[12.8, 56], [22, 56], [24, 86], [18, 94], [11.5, 94], [13.2, 80]]},
+    {"_note": "the second gap, between the right big tree and the tree right of it", "polygon": [[12.8, 56], [18.5, 56], [17.6, 66], [17.4, 78], [21, 86], [18, 94], [11.5, 94], [13.2, 80]]},
     {"_note": "the open space around the basket", "polygon": [[-17, 70], [-24, 80], [-27, 96], [-26, 108], [-20, 119], [-13, 130], [-3, 132], [4, 132], [13, 126], [22, 122], [29, 111], [33, 103], [29, 92], [22, 83], [14, 84], [10, 93], [0, 92], [-6, 90]]}
   ]
 }
