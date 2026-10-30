@@ -115,7 +115,7 @@ export class Controls {
     for (const b of this.bagSheet.querySelectorAll<HTMLButtonElement>('.bag-disc')) b.classList.toggle('on', b.dataset.id === s.discId);
     this.styleButton.textContent = s.style === 'backhand' ? 'Backhand' : 'Forehand';
     this.padDisc.style.setProperty('--disc', d.color);
-    const t = (HYZER_LIMIT - s.hyzerDeg) / (2 * HYZER_LIMIT); // 0 = top (anhyzer), 1 = bottom (hyzer)
+    const t = (HYZER_LIMIT + s.hyzerDeg) / (2 * HYZER_LIMIT); // 0 = top (anhyzer), 1 = bottom (hyzer)
     this.angleThumb.style.top = `${t * 100}%`;
     this.angleLabel.textContent = s.hyzerDeg === 0 ? 'Flat' : s.hyzerDeg > 0 ? `Hyzer ${s.hyzerDeg}°` : `Anhyzer ${-s.hyzerDeg}°`;
   }
@@ -148,7 +148,7 @@ export class Controls {
     const set = (clientY: number) => {
       const r = this.angle.getBoundingClientRect();
       const t = Math.min(1, Math.max(0, (clientY - r.top) / r.height));
-      this.h.update({ hyzerDeg: Math.round(HYZER_LIMIT - t * 2 * HYZER_LIMIT) });
+      this.h.update({ hyzerDeg: Math.round(t * 2 * HYZER_LIMIT - HYZER_LIMIT) });
     };
     this.angle.addEventListener('pointerdown', (e) => {
       if (!this.enabled) return;
