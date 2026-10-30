@@ -262,9 +262,11 @@ export class Character {
     this.chest.position.y = 0.08;
     const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.165, 0.52, 7), shirt);
     torso.position.y = 0.26;
-    const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.06, 7), skin);
-    collar.position.y = 0.55;
-    this.chest.add(torso, collar);
+    // The neck runs from inside the top of the torso up into the head, so no gap shows as the
+    // head turns and nods.
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.085, 0.16, 7), skin);
+    neck.position.y = 0.58;
+    this.chest.add(torso, neck);
     this.hips.add(this.chest);
 
     // Head, hair, face, hat.

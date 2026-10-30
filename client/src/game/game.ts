@@ -13,7 +13,7 @@ import { DebugPanel } from '../ui/debugPanel';
 import { Overlay, type ThrowRecord } from '../ui/overlay';
 import { Character, RELEASE_AT, releasePoint, type ThrowAnim } from '../world/character';
 import { Effects } from '../world/effects';
-import { buildDiscMesh, paintDisc } from '../world/props';
+import { buildDiscMesh, paintDisc, teePadLift } from '../world/props';
 import { followSun } from '../world/scene';
 import { formatFeet, maxStrokes, scoreName } from './score';
 import { AIM_LIMIT, HYZER_LIMIT, MAX_POWER, type ShotSettings } from './settings';
@@ -181,6 +181,11 @@ export class Game {
     return dirToHeading(v3(b.x - this.lie.x, 0, b.z - this.lie.z));
   }
 
+  /** Where the thrower's feet are: the lie, lifted onto the tee pad when standing on it. */
+  private standingAt(): V3 {
+    return v3(this.lie.x, this.lie.y + teePadLift(this.hole, this.lie.x, this.lie.z), this.lie.z);
+  }
+
   private isPutt(): boolean {
     return this.basketDistance() <= CIRCLE_1;
   }
@@ -189,7 +194,7 @@ export class Game {
     const putt = this.isPutt();
     // The flight starts where the thrower's hand lets go (out to the right of the body), and is
     // aimed from there, so a putt off the right hand still lines up on the basket.
-    const from = releaseFrom(this.lie, this.basketHeading() + s.aimOffsetDeg, releasePoint(putt ? 'putt' : s.style));
+    const from = releaseFrom(this.standingAt(), this.basketHeading() + s.aimOffsetDeg, releasePoint(putt ? 'putt' : s.style));
     const b = this.hole.world.basket;
     const aimDeg = dirToHeading(v3(b.x - from.x, 0, b.z - from.z)) + s.aimOffsetDeg;
     return {
@@ -245,7 +250,8 @@ export class Game {
       this.character.setDiscColor(getDisc(s.discId).color);
     }
     const aimDeg = this.basketHeading() + s.aimOffsetDeg;
-    this.thrower.position.set(this.lie.x, this.lie.y, this.lie.z);
+    const feet = this.standingAt();
+    this.thrower.position.set(feet.x, feet.y, feet.z);
     this.thrower.rotation.y = -THREE.MathUtils.degToRad(aimDeg);
     if (this.phase !== 'aim') return;
 
