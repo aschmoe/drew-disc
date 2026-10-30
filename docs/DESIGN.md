@@ -314,9 +314,14 @@ drew-disc/
       sim/                flight model, collisions, frames, seeded RNG (pure TS, no Three.js)
       content/            course and hole JSON -> sim world + render data (seeded generation)
       world/              terrain, instanced trees, basket, props, sky, palette
-      game/               play loop: aim -> flight -> settle -> score; camera
+      game/               play loop: aim -> flight -> settle -> score
+        game.ts             wires the loop together
+        round.ts            turn state: lie, strokes, throw outcomes (pure TS, no Three.js)
+        camera.ts           aim, look and chase cameras
+        playback.ts         plays a flight back: disc, spin, trail, events
+        keyboard.ts         desktop keys
+        shot.ts             release point and auto putt power (pure TS)
       ui/                 HUD and controls overlay
-      (later) player/     touch, mouse and keyboard input; thrower character
       (later) net/        room transport: LocalRoom (single player) and WsRoom (multiplayer)
     public/courses/seatac/
       course.json         name, hole list, environment (sky, fog, sun, wind range)
