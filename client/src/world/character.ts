@@ -285,15 +285,28 @@ export class Character {
     }
     this.head.add(face, hair);
     if (look.hat === 'party') {
-      const hat = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.26, 8), mat(look.hatColor));
-      hat.position.set(0.02, 0.38, 0.01);
-      hat.rotation.z = -0.18;
-      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 0.04, 8), mat('#ffe14d'));
-      band.position.set(0.012, 0.3, 0.01);
-      band.rotation.z = -0.18;
-      const pom = new THREE.Mesh(new THREE.IcosahedronGeometry(0.035, 0), mat('#ffe14d'));
-      pom.position.set(0.045, 0.51, 0.01);
-      this.head.add(hat, band, pom);
+      // A striped cone on the crown, tilted about its own base so it stays seated on the hair.
+      const hat = new THREE.Group();
+      hat.position.set(0.01, 0.255, 0.015);
+      hat.rotation.set(0.12, 0, -0.2);
+      const segments = 12;
+      const cone = new THREE.ConeGeometry(0.088, 0.3, segments, 1, true).toNonIndexed();
+      const stripes = [new THREE.Color(look.hatColor), new THREE.Color('#fff4f8')];
+      const colors: number[] = [];
+      for (let tri = 0; tri < cone.getAttribute('position').count / 3; tri++) {
+        const c = stripes[tri % 2];
+        colors.push(c.r, c.g, c.b, c.r, c.g, c.b, c.r, c.g, c.b);
+      }
+      cone.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+      const shell = new THREE.Mesh(cone, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+      shell.position.y = 0.15;
+      // The band wraps the base all the way round, just outside the cone.
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.086, 0.094, 0.035, segments), mat('#ffe14d'));
+      band.position.y = 0.017;
+      const pom = new THREE.Mesh(new THREE.IcosahedronGeometry(0.042, 1), mat('#ffe14d'));
+      pom.position.y = 0.3;
+      hat.add(shell, band, pom);
+      this.head.add(hat);
     } else if (look.hat === 'cap') {
       const cap = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2), mat(look.hatColor));
       cap.position.y = 0.17;
