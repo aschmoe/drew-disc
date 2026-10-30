@@ -34,8 +34,11 @@ interface ArmPose {
   az: number;
   /** Degrees below horizontal (90 = hanging straight down). */
   el: number;
-  /** Elbow bend, radians. */
-  elbow: number;
+  /** Direction of the forearm, the same way. The elbow is a hinge, so the upper arm turns about
+   *  its own axis (as the humerus does in its socket) to bend toward it: that is what lets a
+   *  forehand lay the forearm back behind a leading elbow. */
+  faz: number;
+  fel: number;
   /** Shoulder rolled forward and in, 0..1: what lets a backhand reach cross in front of the
    *  chest instead of through it. */
   pro: number;
@@ -45,6 +48,7 @@ interface Pose {
   hips: number; // yaw, radians, + = turned left
   torso: number; // extra yaw of the chest over the hips
   lean: number; // forward lean, radians
+  tilt: number; // side bend of the chest, + = right shoulder down
   crouch: number; // knee bend, radians
   r: ArmPose;
   l: ArmPose;
@@ -57,62 +61,136 @@ const P = (
   hips: number,
   torso: number,
   lean: number,
+  tilt: number,
   crouch: number,
   r: ArmPose,
   l: ArmPose,
   rLeg: number,
   lLeg: number,
   spread: number,
-): Pose => ({ hips, torso, lean, crouch, r, l, rLeg, lLeg, spread });
-const A = (az: number, el: number, elbow: number, pro = 0): ArmPose => ({ az, el, elbow, pro });
+): Pose => ({ hips, torso, lean, tilt, crouch, r, l, rLeg, lLeg, spread });
+const A = (az: number, el: number, faz: number, fel: number, pro = 0): ArmPose => ({ az, el, faz, fel, pro });
 
 // Key poses, right-handed, modeled on real throwers:
 // - Backhand reach-back: a wide, low lunge with the right foot toward the target, hips and chest
 //   turned so the back faces the target, torso bent forward, the throwing arm reaching straight
 //   back away from the target at chest height, the off arm out toward the target for balance.
-// - Forehand reach-back: the same wide lunge with the left foot forward, chest opened to the right,
-//   the throwing arm straight back on the right side, the off arm out in front.
-// Arm azimuths are in the chest's frame, so a turned chest carries the arm with it.
-const POSES = {
-  rest: P(0, 0, 0.05, 0.08, A(15, 72, 0.9), A(-10, 82, 0.25), 0, 0, 0.05),
-  backhand: {
-    reach: P(1.15, 0.55, 0.6, 0.8, A(-68, 15, 0.05, 1), A(5, 35, 0.2), 0.1, -0.1, 0.45),
-    release: P(0.15, -0.05, 0.5, 0.6, A(25, 15, 0.05, 0.3), A(-70, 45, 0.5), 0.1, -0.1, 0.4),
-    follow: P(-0.7, -0.4, 0.25, 0.3, A(85, 25, 0.35), A(-100, 60, 0.4), 0.05, 0.35, 0.2),
-  },
-  forehand: {
-    reach: P(-0.75, -0.45, 0.55, 0.7, A(110, 10, 0.25), A(-80, 25, 0.3), -0.1, 0.1, 0.45),
-    release: P(0.15, 0.15, 0.5, 0.55, A(30, 15, 0.35), A(-90, 45, 0.5), -0.1, 0.1, 0.4),
-    follow: P(0.6, 0.45, 0.25, 0.3, A(-20, 35, 0.6), A(-110, 60, 0.4), 0.35, 0.05, 0.2),
-  },
-  putt: {
-    rest: P(0, 0, 0.25, 0.35, A(5, 55, 1.1), A(-15, 72, 0.5), 0.2, -0.1, 0.22),
-    reach: P(0, 0, 0.3, 0.6, A(0, 72, 1.7), A(-20, 70, 0.6), 0.2, -0.1, 0.25),
-    release: P(0, 0, 0.15, 0.05, A(0, -5, 0.05), A(-25, 65, 0.5), 0.2, -0.1, 0.22),
-    follow: P(0, 0, 0.1, 0, A(0, -20, 0.1), A(-25, 65, 0.5), 0.2, -0.1, 0.2),
-  },
-};
+// - Forehand: plant on the right foot, chest opened to the right and the right shoulder dropped,
+//   the arm reaching back behind the hip. Then the hips fire and drag the arm through elbow first:
+//   the elbow stays near the hip while the forearm lies back, hand trailing out to the side (the
+//   pull). Only then does the forearm whip around the elbow to release out in front of the right
+//   hip, low and flat, and the arm wraps across to the left as the hips finish turning.
+// Arm directions are in the chest's frame, so a turned chest carries the arm with it.
+const REST = P(0, 0, 0.05, 0, 0.08, A(15, 72, 2, 21), A(-10, 82, -3, 68), 0, 0, 0.05);
+const PUTT_REST = P(0, 0, 0.25, 0, 0.35, A(5, 55, 1, -8), A(-15, 72, -5, 44), 0.2, -0.1, 0.22);
+
+interface ThrowKeys {
+  rest: Pose;
+  /** Fully wound up: as far as a full pull takes the reach-back. */
+  reach: Pose;
+  /** The swing from the reach as [time, pose]: the release at RELEASE_AT, the top of the
+   *  follow-through at 1. Rest follows at 1.6. */
+  swing: [number, Pose][];
+}
 
 /** Fraction of the throw animation at which the disc leaves the hand. */
 export const RELEASE_AT = 0.35;
 
-function lerpPose(a: Pose, b: Pose, t: number): Pose {
-  const l = (x: number, y: number) => x + (y - x) * t;
-  const arm = (x: ArmPose, y: ArmPose): ArmPose => ({ az: l(x.az, y.az), el: l(x.el, y.el), elbow: l(x.elbow, y.elbow), pro: l(x.pro, y.pro) });
+const THROWS: Record<ThrowAnim, ThrowKeys> = {
+  backhand: {
+    rest: REST,
+    reach: P(1.15, 0.55, 0.6, 0, 0.8, A(-68, 15, -65, 14, 1), A(5, 35, 4, 24), 0.1, -0.1, 0.45),
+    swing: [
+      [RELEASE_AT, P(0.15, -0.05, 0.5, 0, 0.6, A(25, 15, 24, 12, 0.3), A(-70, 45, -39, 30), 0.1, -0.1, 0.4)],
+      [1, P(-0.7, -0.4, 0.25, 0, 0.3, A(85, 25, 63, 22), A(-100, 60, -56, 56), 0.05, 0.35, 0.2)],
+    ],
+  },
+  forehand: {
+    rest: REST,
+    reach: P(-0.7, -0.4, 0.45, 0.25, 0.7, A(95, 25, 105, 30), A(-75, 30, -60, 25), 0.35, -0.4, 0.3),
+    swing: [
+      [0.2, P(0, -0.45, 0.45, 0.3, 0.65, A(50, 60, 110, 0), A(-90, 45, -70, 40), 0.3, -0.35, 0.32)],
+      [RELEASE_AT, P(0.25, 0, 0.4, 0.25, 0.55, A(40, 50, 25, 15), A(-110, 55, -90, 55), 0.3, -0.25, 0.32)],
+      [0.5, P(0.6, 0.2, 0.35, 0.1, 0.45, A(20, 50, -40, 20), A(-120, 55, -100, 50), 0.2, 0, 0.32)],
+      [1, P(0.85, 0.35, 0.3, 0.05, 0.35, A(5, 40, -70, 10), A(-130, 55, -110, 50), 0.15, 0.2, 0.25)],
+    ],
+  },
+  putt: {
+    rest: PUTT_REST,
+    reach: P(0, 0, 0.3, 0, 0.6, A(0, 72, 0, -25), A(-20, 70, -6, 36), 0.2, -0.1, 0.25),
+    swing: [
+      [RELEASE_AT, P(0, 0, 0.15, 0, 0.05, A(0, -5, 0, -8), A(-25, 65, -10, 38), 0.2, -0.1, 0.22)],
+      [1, P(0, 0, 0.1, 0, 0, A(0, -20, 0, -26), A(-25, 65, -10, 38), 0.2, -0.1, 0.2)],
+    ],
+  },
+};
+
+/** A pose whose every value is `f` of that value across `keys`. */
+function blend(keys: Pose[], f: (values: number[]) => number): Pose {
+  const n = (get: (p: Pose) => number) => f(keys.map(get));
+  const arm = (side: 'r' | 'l'): ArmPose => ({
+    az: n((p) => p[side].az),
+    el: n((p) => p[side].el),
+    faz: n((p) => p[side].faz),
+    fel: n((p) => p[side].fel),
+    pro: n((p) => p[side].pro),
+  });
   return {
-    hips: l(a.hips, b.hips),
-    torso: l(a.torso, b.torso),
-    lean: l(a.lean, b.lean),
-    crouch: l(a.crouch, b.crouch),
-    r: arm(a.r, b.r),
-    l: arm(a.l, b.l),
-    rLeg: l(a.rLeg, b.rLeg),
-    lLeg: l(a.lLeg, b.lLeg),
-    spread: l(a.spread, b.spread),
+    hips: n((p) => p.hips),
+    torso: n((p) => p.torso),
+    lean: n((p) => p.lean),
+    tilt: n((p) => p.tilt),
+    crouch: n((p) => p.crouch),
+    r: arm('r'),
+    l: arm('l'),
+    rLeg: n((p) => p.rLeg),
+    lLeg: n((p) => p.lLeg),
+    spread: n((p) => p.spread),
   };
 }
 
+function lerpPose(a: Pose, b: Pose, t: number): Pose {
+  return blend([a, b], ([x, y]) => x + (y - x) * t);
+}
+
+/**
+ * Monotone cubic through (times, values) at t: the motion keeps speeding up into a key it carries
+ * on through (so the hand is fastest at the release, not stopped there) and eases in and out of
+ * turning points without overshooting them.
+ */
+function monotoneCubic(times: number[], values: number[], t: number): number {
+  const last = times.length - 1;
+  let i = 0;
+  while (i < last - 1 && t > times[i + 1]) i++;
+  const slope = (k: number) => (values[k + 1] - values[k]) / (times[k + 1] - times[k]);
+  const tangent = (k: number) => {
+    if (k === 0 || k === last) return 0;
+    const a = slope(k - 1);
+    const b = slope(k);
+    if (a * b <= 0) return 0;
+    return Math.sign(a) * Math.min(2 * Math.abs(a), 3 * Math.abs(b));
+  };
+  const h = times[i + 1] - times[i];
+  const s = Math.min(1, Math.max(0, (t - times[i]) / h));
+  const s2 = s * s;
+  const s3 = s2 * s;
+  return (
+    (2 * s3 - 3 * s2 + 1) * values[i] +
+    (s3 - 2 * s2 + s) * h * tangent(i) +
+    (-2 * s3 + 3 * s2) * values[i + 1] +
+    (s3 - s2) * h * tangent(i + 1)
+  );
+}
+
 const smooth = (t: number) => t * t * (3 - 2 * t);
+const FORWARD = new THREE.Vector3(0, 0, -1);
+
+/** Unit vector for an arm direction (azimuth, degrees below horizontal) in the chest's frame. */
+function armDirection(azDeg: number, elDeg: number): THREE.Vector3 {
+  const az = THREE.MathUtils.degToRad(azDeg);
+  const el = THREE.MathUtils.degToRad(elDeg);
+  return new THREE.Vector3(Math.sin(az) * Math.cos(el), -Math.sin(el), -Math.cos(az) * Math.cos(el));
+}
 const mat = (color: string) => new THREE.MeshLambertMaterial({ color, flatShading: true });
 
 interface Limb {
@@ -234,23 +312,25 @@ export class Character {
     this.rArm = arm(1);
     this.lArm = arm(-1);
 
-    // The disc in the right hand: a flattened cylinder gripped at its rim.
+    // The disc in the right hand: a flattened cylinder gripped at its rim, so it sits out past the
+    // fingers.
     this.handDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.105, 0.02, 16), this.discMat);
-    this.handDisc.position.set(0, -0.33, -0.06);
+    this.handDisc.position.set(0, -0.37, 0);
     this.rArm.lower.add(this.handDisc);
 
     this.root.add(this.hips);
     this.root.traverse((o) => {
       if (o instanceof THREE.Mesh) o.castShadow = true;
     });
-    this.apply(POSES.rest, 0);
+    this.apply(REST, 0);
   }
 
-  /** Shoulder, elbow and hand of each arm in the chest's frame (after the last pose). */
-  armSegments(): ArmSegments {
+  /** Shoulder, elbow and hand of each arm (after the last pose), in the chest's frame or the
+   *  root's (facing -z, the throw direction). */
+  armSegments(frame: 'chest' | 'root' = 'chest'): ArmSegments {
     this.root.updateMatrixWorld(true);
-    const toChest = this.chest.matrixWorld.clone().invert();
-    const pt = (o: THREE.Object3D, y = 0) => o.localToWorld(new THREE.Vector3(0, y, 0)).applyMatrix4(toChest);
+    const to = (frame === 'chest' ? this.chest : this.root).matrixWorld.clone().invert();
+    const pt = (o: THREE.Object3D, y = 0) => o.localToWorld(new THREE.Vector3(0, y, 0)).applyMatrix4(to);
     const limb = (l: Limb): [THREE.Vector3, THREE.Vector3, THREE.Vector3] => [pt(l.upper), pt(l.lower), pt(l.lower, -0.28)];
     return { right: limb(this.rArm), left: limb(this.lArm) };
   }
@@ -271,17 +351,17 @@ export class Character {
    * time (seconds) drives the idle breathing.
    */
   pose(style: ThrowAnim, reach: number, follow: number | null, time: number): void {
-    const set = POSES[style];
-    const rest = style === 'putt' ? POSES.putt.rest : POSES.rest;
+    const set = THROWS[style];
     let p: Pose;
     if (follow === null) {
-      p = lerpPose(rest, set.reach, smooth(Math.min(1, reach)));
-    } else if (follow < RELEASE_AT) {
-      p = lerpPose(set.reach, set.release, smooth(follow / RELEASE_AT));
-    } else if (follow < 1) {
-      p = lerpPose(set.release, set.follow, smooth((follow - RELEASE_AT) / (1 - RELEASE_AT)));
+      p = lerpPose(set.rest, set.reach, smooth(Math.min(1, reach)));
     } else {
-      p = lerpPose(set.follow, rest, smooth(Math.min(1, (follow - 1) / 0.6)));
+      const keys: [number, Pose][] = [[0, set.reach], ...set.swing, [1.6, set.rest]];
+      const times = keys.map(([t]) => t);
+      p = blend(
+        keys.map(([, k]) => k),
+        (values) => monotoneCubic(times, values, follow),
+      );
     }
     this.apply(p, follow === null && reach === 0 ? time : 0);
   }
@@ -297,9 +377,9 @@ export class Character {
     };
     this.hips.position.y = 0.08 + Math.min(legHeight(p.rLeg), legHeight(p.lLeg));
     this.hips.rotation.y = p.hips;
-    this.chest.rotation.set(-p.lean + breathe, p.torso, 0);
-    // The head stays on the target while the body turns.
-    this.head.rotation.set(p.lean * 0.6, -(p.hips + p.torso) * 0.75, 0);
+    this.chest.rotation.set(-p.lean + breathe, p.torso, -p.tilt);
+    // The head stays on the target, and roughly level, while the body turns and bends.
+    this.head.rotation.set(p.lean * 0.6, -(p.hips + p.torso) * 0.75, p.tilt * 0.6);
 
     for (const [leg, swing, side] of [
       [this.rLeg, p.rLeg, 1],
@@ -312,11 +392,18 @@ export class Character {
     const aim = (limb: Limb, a: ArmPose, side: number) => {
       // The shoulder joint rolls forward and toward the middle as `pro` rises.
       limb.upper.position.set(side * (0.24 - 0.1 * a.pro), 0.47, -0.2 * a.pro);
-      const az = THREE.MathUtils.degToRad(a.az);
-      const el = THREE.MathUtils.degToRad(a.el);
-      const dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), -Math.sin(el), -Math.cos(az) * Math.cos(el));
-      limb.upper.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir);
-      limb.lower.rotation.set(a.elbow, 0, 0);
+      const upper = armDirection(a.az, a.el);
+      const fore = armDirection(a.faz, a.fel);
+      // The elbow hinges about the upper arm's x axis, swinging the forearm toward the upper arm's
+      // -z. Turn the upper arm about its length so -z points where the forearm goes. (A nearly
+      // straight arm leans on a little "forward" so the turn doesn't flip about.)
+      const toward = fore.clone().addScaledVector(FORWARD, 0.02);
+      toward.addScaledVector(upper, -toward.dot(upper)).normalize();
+      const y = upper.clone().negate();
+      const z = toward.negate();
+      const x = new THREE.Vector3().crossVectors(y, z);
+      limb.upper.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+      limb.lower.rotation.set(upper.angleTo(fore), 0, 0);
     };
     aim(this.rArm, p.r, 1);
     aim(this.lArm, p.l, -1);

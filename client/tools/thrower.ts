@@ -4,21 +4,35 @@
 import * as THREE from 'three';
 import { Character, RELEASE_AT, type ThrowAnim } from '../src/world/character';
 
-const poses: { label: string; style: ThrowAnim; reach: number; follow: number | null }[] = [
+const sheet: { label: string; style: ThrowAnim; reach: number; follow: number | null }[] = [
   { label: 'Rest', style: 'backhand', reach: 0, follow: null },
   { label: 'BH reach', style: 'backhand', reach: 1, follow: null },
   { label: 'BH release', style: 'backhand', reach: 0, follow: RELEASE_AT },
   { label: 'BH follow', style: 'backhand', reach: 0, follow: 1 },
   { label: 'FH reach', style: 'forehand', reach: 1, follow: null },
+  { label: 'FH pull', style: 'forehand', reach: 0, follow: 0.2 },
   { label: 'FH release', style: 'forehand', reach: 0, follow: RELEASE_AT },
   { label: 'FH follow', style: 'forehand', reach: 0, follow: 1 },
   { label: 'Putt reach', style: 'putt', reach: 1, follow: null },
   { label: 'Putt release', style: 'putt', reach: 0, follow: RELEASE_AT },
 ];
 
-const W = 1350;
+// ?swing=forehand (or backhand, putt) shows that throw as a filmstrip instead, frame by frame
+// from the end of the reach-back to the top of the follow-through.
+const swing = new URLSearchParams(location.search).get('swing') as ThrowAnim | null;
+const poses = swing
+  ? [0, 0.1, 0.2, 0.275, RELEASE_AT, 0.45, 0.6, 0.8, 1].map((f) => ({
+      label: f === RELEASE_AT ? `${f} release` : String(f),
+      style: swing,
+      reach: 0,
+      follow: f as number | null,
+    }))
+  : sheet;
+
+const W = 1500;
 const H = 780;
 const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c') as HTMLCanvasElement, antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(W, H);
 renderer.setScissorTest(true);
 const scene = new THREE.Scene();
