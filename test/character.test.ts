@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { Character, RELEASE_AT, type ThrowAnim } from '../client/src/world/character';
+import { Character, RELEASE_AT, releasePoint, type ThrowAnim } from '../client/src/world/character';
 
 // Torso and head as the character builds them, in the chest's frame.
 const TORSO_BOTTOM = 0;
@@ -43,6 +43,46 @@ describe('thrower poses', () => {
       }
     }
     expect(bad).toEqual([]);
+  });
+
+  /** Right shoulder, elbow and hand in the root's frame (target toward -z) at a swing time. */
+  const rightArm = (style: ThrowAnim, follow: number) => {
+    c.pose(style, 0, follow, 0);
+    const [shoulder, elbow, hand] = c.armSegments('root').right;
+    return { shoulder, elbow, hand };
+  };
+
+  it('leads a forehand with the elbow, the forearm laid back, then whips the hand through', () => {
+    const pull = rightArm('forehand', 0.2);
+    // Elbow ahead of the hand (nearer the target) and the hand trailing out to the side.
+    expect(pull.hand.z - pull.elbow.z).toBeGreaterThan(0.15);
+    expect(pull.hand.x - pull.elbow.x).toBeGreaterThan(0.15);
+    // At the release the hand has passed the elbow, out in front of the right hip and low.
+    const release = rightArm('forehand', RELEASE_AT);
+    expect(release.hand.z).toBeLessThan(release.elbow.z - 0.1);
+    expect(release.hand.x).toBeGreaterThan(0.2);
+    expect(release.hand.y).toBeLessThan(release.shoulder.y - 0.3);
+    // And the arm wraps across the body to finish on the left.
+    expect(rightArm('forehand', 1).hand.x).toBeLessThan(0);
+  });
+
+  it('has the hand moving at close to its top speed when the disc leaves it', () => {
+    for (const style of ['backhand', 'forehand'] as const) {
+      const dt = 0.01;
+      const speed = (f: number) => rightArm(style, f + dt / 2).hand.distanceTo(rightArm(style, f - dt / 2).hand) / dt;
+      let top = 0;
+      for (let f = dt; f <= 1; f += dt) top = Math.max(top, speed(f));
+      expect(speed(RELEASE_AT), style).toBeGreaterThan(0.85 * top);
+    }
+  });
+
+  it('gives the game the spot where the disc leaves the hand, so the flight starts there', () => {
+    for (const style of ['backhand', 'forehand', 'putt'] as const) {
+      c.pose(style, 0, RELEASE_AT, 0);
+      expect(releasePoint(style).distanceTo(c.handDiscPosition()), style).toBeLessThan(1e-9);
+      expect(releasePoint(style).x, style).toBeGreaterThan(0.1); // out on the throwing side
+    }
+    expect(releasePoint('forehand').y).toBeLessThan(releasePoint('backhand').y);
   });
 
   it('releases at the point the game starts the flight', () => {

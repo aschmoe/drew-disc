@@ -98,12 +98,24 @@ export function placeBasket(hole: Hole): THREE.Group {
 }
 
 /** Tee pad (the sign is in decor.ts). */
+/** The concrete tee pad: its footprint, how far its top stands above the ground, and how far its
+ *  middle sits behind the tee position (so the thrower stands near the front, with room to step). */
+const TEE_PAD = { width: 1.8, length: 4.2, top: 0.07, thickness: 0.15, behind: 1.2 };
+
+/** How far up the thrower stands at (x, z): the pad's height when that is on the tee pad, else 0. */
+export function teePadLift(hole: Hole, x: number, z: number): number {
+  const tee = hole.def.tees[0];
+  const base = mapToWorld(tee.pos, 0);
+  const onPad = Math.abs(x - base.x) <= TEE_PAD.width / 2 && Math.abs(z - (base.z + TEE_PAD.behind)) <= TEE_PAD.length / 2;
+  return onPad ? TEE_PAD.top : 0;
+}
+
 export function buildTee(hole: Hole): THREE.Group {
   const g = new THREE.Group();
   const tee = hole.def.tees[0];
   const base = mapToWorld(tee.pos, hole.world.groundHeight(tee.pos[0], -tee.pos[1]));
-  const pad = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.12, 4.2), lambert(SURFACE_COLOR.tee));
-  pad.position.set(base.x, base.y + 0.04, base.z + 1.5);
+  const pad = new THREE.Mesh(new THREE.BoxGeometry(TEE_PAD.width, TEE_PAD.thickness, TEE_PAD.length), lambert(SURFACE_COLOR.tee));
+  pad.position.set(base.x, base.y + TEE_PAD.top - TEE_PAD.thickness / 2, base.z + TEE_PAD.behind);
   pad.receiveShadow = true;
   g.add(pad);
 

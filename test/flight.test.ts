@@ -67,6 +67,22 @@ describe('flight model', () => {
     }
   });
 
+  it('comes down on a hyzer, never on its edge', () => {
+    for (const discId of ['birthday-boy', 'red-eye', 'puddle-jumper', 'chain-seeker']) {
+      for (const power of [0.5, 0.8, 1.1]) {
+        for (const hyzerDeg of [-25, 0, 25]) {
+          for (const style of ['backhand', 'forehand'] as const) {
+            const r = throwIt({ discId, power, hyzerDeg, style, seed: 7 });
+            const landed = r.events.find((e) => e.kind === 'ground')!;
+            const last = [...r.path].reverse().find((s) => s.t <= landed.t)!;
+            const tilt = (Math.acos(last.n[1]) * 180) / Math.PI;
+            expect(tilt, `${style} ${discId} power ${power} hyzer ${hyzerDeg}`).toBeLessThan(62);
+          }
+        }
+      }
+    }
+  });
+
   it('distances are in a believable range for a strong amateur', () => {
     const full = (discId: string) => feet(-throwIt({ discId, power: 1 }).rest.z);
     expect(full('birthday-boy')).toBeGreaterThan(360);

@@ -6,6 +6,7 @@
 // the root toward the aim).
 
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export type ThrowAnim = 'backhand' | 'forehand' | 'putt';
 
@@ -13,7 +14,11 @@ export interface CharacterLook {
   shirt: string;
   shorts: string;
   skin: string;
+  /** Hair color, also used for the eyebrows. */
   hair: string;
+  hairStyle: 'short' | 'bald';
+  /** Beard and mustache color, or null for clean-shaven. */
+  beard: string | null;
   shoes: string;
   hat: 'party' | 'cap' | 'none';
   hatColor: string;
@@ -23,7 +28,9 @@ export const DEFAULT_LOOK: CharacterLook = {
   shirt: '#2f7de1',
   shorts: '#5d6670',
   skin: '#e2b48f',
-  hair: '#6b4a2f',
+  hair: '#4a3628',
+  hairStyle: 'bald',
+  beard: '#6e5747',
   shoes: '#f2f2ee',
   hat: 'party',
   hatColor: '#ff3d8b',
@@ -34,8 +41,11 @@ interface ArmPose {
   az: number;
   /** Degrees below horizontal (90 = hanging straight down). */
   el: number;
-  /** Elbow bend, radians. */
-  elbow: number;
+  /** Direction of the forearm, the same way. The elbow is a hinge, so the upper arm turns about
+   *  its own axis (as the humerus does in its socket) to bend toward it: that is what lets a
+   *  forehand lay the forearm back behind a leading elbow. */
+  faz: number;
+  fel: number;
   /** Shoulder rolled forward and in, 0..1: what lets a backhand reach cross in front of the
    *  chest instead of through it. */
   pro: number;
@@ -45,6 +55,7 @@ interface Pose {
   hips: number; // yaw, radians, + = turned left
   torso: number; // extra yaw of the chest over the hips
   lean: number; // forward lean, radians
+  tilt: number; // side bend of the chest, + = right shoulder down
   crouch: number; // knee bend, radians
   r: ArmPose;
   l: ArmPose;
@@ -57,63 +68,237 @@ const P = (
   hips: number,
   torso: number,
   lean: number,
+  tilt: number,
   crouch: number,
   r: ArmPose,
   l: ArmPose,
   rLeg: number,
   lLeg: number,
   spread: number,
-): Pose => ({ hips, torso, lean, crouch, r, l, rLeg, lLeg, spread });
-const A = (az: number, el: number, elbow: number, pro = 0): ArmPose => ({ az, el, elbow, pro });
+): Pose => ({ hips, torso, lean, tilt, crouch, r, l, rLeg, lLeg, spread });
+const A = (az: number, el: number, faz: number, fel: number, pro = 0): ArmPose => ({ az, el, faz, fel, pro });
 
 // Key poses, right-handed, modeled on real throwers:
 // - Backhand reach-back: a wide, low lunge with the right foot toward the target, hips and chest
 //   turned so the back faces the target, torso bent forward, the throwing arm reaching straight
 //   back away from the target at chest height, the off arm out toward the target for balance.
-// - Forehand reach-back: the same wide lunge with the left foot forward, chest opened to the right,
-//   the throwing arm straight back on the right side, the off arm out in front.
-// Arm azimuths are in the chest's frame, so a turned chest carries the arm with it.
-const POSES = {
-  rest: P(0, 0, 0.05, 0.08, A(15, 72, 0.9), A(-10, 82, 0.25), 0, 0, 0.05),
-  backhand: {
-    reach: P(1.15, 0.55, 0.6, 0.8, A(-68, 15, 0.05, 1), A(5, 35, 0.2), 0.1, -0.1, 0.45),
-    release: P(0.15, -0.05, 0.5, 0.6, A(25, 15, 0.05, 0.3), A(-70, 45, 0.5), 0.1, -0.1, 0.4),
-    follow: P(-0.7, -0.4, 0.25, 0.3, A(85, 25, 0.35), A(-100, 60, 0.4), 0.05, 0.35, 0.2),
-  },
-  forehand: {
-    reach: P(-0.75, -0.45, 0.55, 0.7, A(110, 10, 0.25), A(-80, 25, 0.3), -0.1, 0.1, 0.45),
-    release: P(0.15, 0.15, 0.5, 0.55, A(30, 15, 0.35), A(-90, 45, 0.5), -0.1, 0.1, 0.4),
-    follow: P(0.6, 0.45, 0.25, 0.3, A(-20, 35, 0.6), A(-110, 60, 0.4), 0.35, 0.05, 0.2),
-  },
-  putt: {
-    rest: P(0, 0, 0.25, 0.35, A(5, 55, 1.1), A(-15, 72, 0.5), 0.2, -0.1, 0.22),
-    reach: P(0, 0, 0.3, 0.6, A(0, 72, 1.7), A(-20, 70, 0.6), 0.2, -0.1, 0.25),
-    release: P(0, 0, 0.15, 0.05, A(0, -5, 0.05), A(-25, 65, 0.5), 0.2, -0.1, 0.22),
-    follow: P(0, 0, 0.1, 0, A(0, -20, 0.1), A(-25, 65, 0.5), 0.2, -0.1, 0.2),
-  },
-};
+// - Forehand: plant on the right foot, chest opened to the right and the right shoulder dropped,
+//   the arm reaching back behind the hip. Then the hips fire and drag the arm through elbow first:
+//   the elbow stays near the hip while the forearm lies back, hand trailing out to the side (the
+//   pull). Only then does the forearm whip around the elbow to release out in front of the right
+//   hip, low and flat, and the arm wraps across to the left as the hips finish turning.
+// Arm directions are in the chest's frame, so a turned chest carries the arm with it.
+const REST = P(0, 0, 0.05, 0, 0.08, A(15, 72, 2, 21), A(-10, 82, -3, 68), 0, 0, 0.05);
+const PUTT_REST = P(0, 0, 0.25, 0, 0.35, A(5, 55, 1, -8), A(-15, 72, -5, 44), 0.2, -0.1, 0.22);
+
+interface ThrowKeys {
+  rest: Pose;
+  /** Fully wound up: as far as a full pull takes the reach-back. */
+  reach: Pose;
+  /** The swing from the reach as [time, pose]: the release at RELEASE_AT, the top of the
+   *  follow-through at 1. Rest follows at 1.6. */
+  swing: [number, Pose][];
+}
 
 /** Fraction of the throw animation at which the disc leaves the hand. */
 export const RELEASE_AT = 0.35;
 
-function lerpPose(a: Pose, b: Pose, t: number): Pose {
-  const l = (x: number, y: number) => x + (y - x) * t;
-  const arm = (x: ArmPose, y: ArmPose): ArmPose => ({ az: l(x.az, y.az), el: l(x.el, y.el), elbow: l(x.elbow, y.elbow), pro: l(x.pro, y.pro) });
+const THROWS: Record<ThrowAnim, ThrowKeys> = {
+  backhand: {
+    rest: REST,
+    reach: P(1.15, 0.55, 0.6, 0, 0.8, A(-68, 15, -65, 14, 1), A(5, 35, 4, 24), 0.1, -0.1, 0.45),
+    swing: [
+      [RELEASE_AT, P(0.15, -0.05, 0.5, 0, 0.6, A(25, 15, 24, 12, 0.3), A(-70, 45, -39, 30), 0.1, -0.1, 0.4)],
+      [1, P(-0.7, -0.4, 0.25, 0, 0.3, A(85, 25, 63, 22), A(-100, 60, -56, 56), 0.05, 0.35, 0.2)],
+    ],
+  },
+  forehand: {
+    rest: REST,
+    reach: P(-0.7, -0.4, 0.45, 0.25, 0.7, A(95, 25, 105, 30), A(-75, 30, -60, 25), 0.35, -0.4, 0.3),
+    swing: [
+      [0.2, P(0, -0.45, 0.45, 0.3, 0.65, A(50, 60, 110, 0), A(-90, 45, -70, 40), 0.3, -0.35, 0.32)],
+      [RELEASE_AT, P(0.25, 0, 0.4, 0.25, 0.55, A(40, 50, 25, 15), A(-110, 55, -90, 55), 0.3, -0.25, 0.32)],
+      [0.5, P(0.6, 0.2, 0.35, 0.1, 0.45, A(20, 50, -40, 20), A(-120, 55, -100, 50), 0.2, 0, 0.32)],
+      [1, P(0.85, 0.35, 0.3, 0.05, 0.35, A(5, 40, -70, 10), A(-130, 55, -110, 50), 0.15, 0.2, 0.25)],
+    ],
+  },
+  putt: {
+    rest: PUTT_REST,
+    reach: P(0, 0, 0.3, 0, 0.6, A(0, 72, 0, -25), A(-20, 70, -6, 36), 0.2, -0.1, 0.25),
+    swing: [
+      [RELEASE_AT, P(0, 0, 0.15, 0, 0.05, A(0, 22, 0, 18), A(-25, 65, -10, 38), 0.2, -0.1, 0.22)],
+      [1, P(0, 0, 0.1, 0, 0, A(0, -20, 0, -26), A(-25, 65, -10, 38), 0.2, -0.1, 0.2)],
+    ],
+  },
+};
+
+/** A pose whose every value is `f` of that value across `keys`. */
+function blend(keys: Pose[], f: (values: number[]) => number): Pose {
+  const n = (get: (p: Pose) => number) => f(keys.map(get));
+  const arm = (side: 'r' | 'l'): ArmPose => ({
+    az: n((p) => p[side].az),
+    el: n((p) => p[side].el),
+    faz: n((p) => p[side].faz),
+    fel: n((p) => p[side].fel),
+    pro: n((p) => p[side].pro),
+  });
   return {
-    hips: l(a.hips, b.hips),
-    torso: l(a.torso, b.torso),
-    lean: l(a.lean, b.lean),
-    crouch: l(a.crouch, b.crouch),
-    r: arm(a.r, b.r),
-    l: arm(a.l, b.l),
-    rLeg: l(a.rLeg, b.rLeg),
-    lLeg: l(a.lLeg, b.lLeg),
-    spread: l(a.spread, b.spread),
+    hips: n((p) => p.hips),
+    torso: n((p) => p.torso),
+    lean: n((p) => p.lean),
+    tilt: n((p) => p.tilt),
+    crouch: n((p) => p.crouch),
+    r: arm('r'),
+    l: arm('l'),
+    rLeg: n((p) => p.rLeg),
+    lLeg: n((p) => p.lLeg),
+    spread: n((p) => p.spread),
   };
 }
 
+function lerpPose(a: Pose, b: Pose, t: number): Pose {
+  return blend([a, b], ([x, y]) => x + (y - x) * t);
+}
+
+/**
+ * Monotone cubic through (times, values) at t: the motion keeps speeding up into a key it carries
+ * on through (so the hand is fastest at the release, not stopped there) and eases in and out of
+ * turning points without overshooting them.
+ */
+function monotoneCubic(times: number[], values: number[], t: number): number {
+  const last = times.length - 1;
+  let i = 0;
+  while (i < last - 1 && t > times[i + 1]) i++;
+  const slope = (k: number) => (values[k + 1] - values[k]) / (times[k + 1] - times[k]);
+  const tangent = (k: number) => {
+    if (k === 0 || k === last) return 0;
+    const a = slope(k - 1);
+    const b = slope(k);
+    if (a * b <= 0) return 0;
+    return Math.sign(a) * Math.min(2 * Math.abs(a), 3 * Math.abs(b));
+  };
+  const h = times[i + 1] - times[i];
+  const s = Math.min(1, Math.max(0, (t - times[i]) / h));
+  const s2 = s * s;
+  const s3 = s2 * s;
+  return (
+    (2 * s3 - 3 * s2 + 1) * values[i] +
+    (s3 - 2 * s2 + s) * h * tangent(i) +
+    (-2 * s3 + 3 * s2) * values[i + 1] +
+    (s3 - s2) * h * tangent(i + 1)
+  );
+}
+
 const smooth = (t: number) => t * t * (3 - 2 * t);
+const FORWARD = new THREE.Vector3(0, 0, -1);
+
+// Scratch objects for posing, reused every frame.
+const upperDir = new THREE.Vector3();
+const foreDir = new THREE.Vector3();
+const basisX = new THREE.Vector3();
+const basisY = new THREE.Vector3();
+const basisZ = new THREE.Vector3();
+const basis = new THREE.Matrix4();
+const rootQ = new THREE.Quaternion();
+const parentQ = new THREE.Quaternion();
+
+/** Sets `out` to an arm direction (azimuth, degrees below horizontal) in the chest's frame. */
+function armDirection(out: THREE.Vector3, azDeg: number, elDeg: number): THREE.Vector3 {
+  const az = THREE.MathUtils.degToRad(azDeg);
+  const el = THREE.MathUtils.degToRad(elDeg);
+  return out.set(Math.sin(az) * Math.cos(el), -Math.sin(el), -Math.cos(az) * Math.cos(el));
+}
 const mat = (color: string) => new THREE.MeshLambertMaterial({ color, flatShading: true });
+
+/**
+ * A friendly cartoon face, merged into one mesh (one draw call, no shadow): big white eyes with
+ * dark pupils and a glint, eyebrows, a small nose, a big toothy grin and, when the look has one, a
+ * short beard and mustache. Placed on the head sphere (radius 0.14, centered 0.13 up), facing -z.
+ */
+function faceFeatures(look: CharacterLook): THREE.Mesh {
+  const parts: THREE.BufferGeometry[] = [];
+  const add = (
+    geo: THREE.BufferGeometry,
+    color: string,
+    pos: [number, number, number],
+    scale: [number, number, number] = [1, 1, 1],
+    rot: [number, number, number] = [0, 0, 0],
+    faceted = false,
+  ) => {
+    const g = geo.index ? geo.toNonIndexed() : geo;
+    g.deleteAttribute('uv');
+    g.applyMatrix4(
+      new THREE.Matrix4().compose(new THREE.Vector3(...pos), new THREE.Quaternion().setFromEuler(new THREE.Euler(...rot)), new THREE.Vector3(...scale)),
+    );
+    if (faceted) g.computeVertexNormals(); // unshared vertices, so each triangle gets its own normal
+    const c = new THREE.Color(color);
+    g.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: g.getAttribute('position').count }, () => [c.r, c.g, c.b]).flat(), 3));
+    parts.push(g);
+  };
+  // A point on the head's surface, `out` beyond it: x across, y up from the head's center.
+  const on = (x: number, y: number, out = 0): [number, number, number] => {
+    const z = Math.sqrt(Math.max(0, 0.14 ** 2 - x * x - y * y));
+    const k = (0.14 + out) / 0.14;
+    return [x * k, 0.13 + y * k, -z * k];
+  };
+  for (const side of [-1, 1]) {
+    add(new THREE.SphereGeometry(0.027, 12, 8), '#ffffff', on(0.048 * side, 0.018, -0.01), [1, 1.15, 0.55]);
+    add(new THREE.SphereGeometry(0.015, 10, 6), '#2b1d14', on(0.046 * side, 0.014, 0.004), [1, 1.1, 0.6]);
+    add(new THREE.SphereGeometry(0.005, 6, 4), '#ffffff', on(0.046 * side + 0.005, 0.021, 0.01));
+    add(new THREE.BoxGeometry(0.042, 0.009, 0.01), look.hair, on(0.05 * side, 0.058, 0.002), [1, 1, 1], [0, 0, -0.18 * side]);
+  }
+  add(new THREE.SphereGeometry(0.015, 10, 6), '#e3a684', on(0, -0.012, 0.005));
+
+  // A short beard: a faceted shell over the jaw and chin from ear to ear, its top edge curving
+  // from the sideburns down under the cheeks, each facet a slightly different shade like stubble.
+  if (look.beard) {
+    const shell = new THREE.SphereGeometry(0.1428, 28, 16, Math.PI, Math.PI, 0.5 * Math.PI, 0.5 * Math.PI).toNonIndexed();
+    const pos = shell.getAttribute('position');
+    const kept: number[] = [];
+    const colors: number[] = [];
+    const base = new THREE.Color(look.beard);
+    const c = new THREE.Color();
+    for (let tri = 0; tri < pos.count / 3; tri++) {
+      let x = 0;
+      let y = 0;
+      let z = 0;
+      for (let v = 0; v < 3; v++) {
+        x += pos.getX(tri * 3 + v) / 3;
+        y += pos.getY(tri * 3 + v) / 3;
+        z += pos.getZ(tri * 3 + v) / 3;
+      }
+      const front = Math.max(0, -z) / Math.hypot(x, z); // 1 straight ahead, 0 at the ears
+      const top = -0.012 - 0.03 * front * front; // jawline height, down from ear level to the cheeks
+      if (y > top) continue;
+      const shade = 0.88 + 0.24 * (((tri * 2654435761) >>> 0) / 2 ** 32);
+      c.copy(base).multiplyScalar(shade);
+      for (let v = 0; v < 3; v++) {
+        kept.push(pos.getX(tri * 3 + v), pos.getY(tri * 3 + v) + 0.13, pos.getZ(tri * 3 + v));
+        colors.push(c.r, c.g, c.b);
+      }
+    }
+    const beard = new THREE.BufferGeometry();
+    beard.setAttribute('position', new THREE.Float32BufferAttribute(kept, 3));
+    beard.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    beard.computeVertexNormals();
+    parts.push(beard);
+  }
+
+  // The grin and the mustache are rows of beads, each placed on the surface so they hug the face.
+  const bead = (r: number) => new THREE.SphereGeometry(r, 6, 4);
+  const arc = (a: number) => ({ x: 0.032 * Math.sin(a), top: -0.036 - 0.004 * Math.cos(a), bottom: -0.04 - 0.022 * Math.cos(a) });
+  for (let i = 0; i <= 24; i++) {
+    const a = (i / 24 - 0.5) * 2.3;
+    const { x, top, bottom } = arc(a);
+    for (let k = 1; k < 4; k++) add(bead(0.0065), '#f7f3ea', on(x, top + ((bottom - top) * k) / 4, 0.003));
+    add(bead(0.005), '#5a2a22', on(x, top, 0.004));
+    add(bead(0.006), '#5a2a22', on(x, bottom, 0.004));
+    if (look.beard) add(bead(0.0065), look.beard, on(0.04 * Math.sin(a), -0.027 - 0.005 * Math.cos(a), 0.004));
+  }
+  const mesh = new THREE.Mesh(mergeGeometries(parts), new THREE.MeshLambertMaterial({ vertexColors: true }));
+  mesh.userData.noShadow = true;
+  return mesh;
+}
 
 interface Limb {
   upper: THREE.Group;
@@ -174,36 +359,59 @@ export class Character {
     this.chest.position.y = 0.08;
     const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.165, 0.52, 7), shirt);
     torso.position.y = 0.26;
-    const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.06, 7), skin);
-    collar.position.y = 0.55;
-    this.chest.add(torso, collar);
+    // The neck runs from inside the top of the torso up into the head, so no gap shows as the
+    // head turns and nods.
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.085, 0.16, 7), skin);
+    neck.position.y = 0.58;
+    this.chest.add(torso, neck);
     this.hips.add(this.chest);
 
     // Head, hair, face, hat.
     this.head.position.y = 0.6;
-    const face = new THREE.Mesh(new THREE.IcosahedronGeometry(0.14, 1), skin);
+    // The head is smooth-shaded (faceted, its lower facets read as stubble), with the hair sitting
+    // up off the brow so it doesn't shade the eyes.
+    const face = new THREE.Mesh(new THREE.IcosahedronGeometry(0.14, 2), new THREE.MeshLambertMaterial({ color: look.skin }));
     face.position.y = 0.13;
-    const hair = new THREE.Mesh(new THREE.IcosahedronGeometry(0.145, 1), mat(look.hair));
-    hair.scale.set(1, 0.75, 1);
-    hair.position.set(0, 0.18, 0.025);
-    const eye = new THREE.SphereGeometry(0.018, 6, 4);
-    const eyes = mat('#1d1d1d');
-    for (const side of [-1, 1]) {
-      const e = new THREE.Mesh(eye, eyes);
-      e.position.set(0.05 * side, 0.14, -0.125);
-      this.head.add(e);
+    // Short hair is one cap over the top and back, down to the nape, with the hairline above the
+    // brows.
+    if (look.hairStyle === 'short') {
+      const hair = new THREE.Mesh(new THREE.IcosahedronGeometry(0.15, 1), mat(look.hair));
+      hair.scale.set(1, 0.9, 0.95);
+      hair.position.set(0, 0.17, 0.045);
+      this.head.add(hair);
     }
-    this.head.add(face, hair);
+    const earGeo = new THREE.SphereGeometry(0.03, 8, 6);
+    for (const side of [-1, 1]) {
+      const ear = new THREE.Mesh(earGeo, skin);
+      ear.scale.set(0.45, 1, 0.75);
+      ear.position.set(0.138 * side, 0.12, -0.005);
+      this.head.add(ear);
+    }
+    this.head.add(face, faceFeatures(look));
     if (look.hat === 'party') {
-      const hat = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.26, 8), mat(look.hatColor));
-      hat.position.set(0.02, 0.38, 0.01);
-      hat.rotation.z = -0.18;
-      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.085, 0.04, 8), mat('#ffe14d'));
-      band.position.set(0.012, 0.3, 0.01);
-      band.rotation.z = -0.18;
-      const pom = new THREE.Mesh(new THREE.IcosahedronGeometry(0.035, 0), mat('#ffe14d'));
-      pom.position.set(0.045, 0.51, 0.01);
-      this.head.add(hat, band, pom);
+      // A striped cone on the crown, tilted about its own base so it stays seated on the head
+      // (lower on a bald head, where there's no hair under it).
+      const hat = new THREE.Group();
+      hat.position.set(0.01, look.hairStyle === 'bald' ? 0.235 : 0.255, 0.015);
+      hat.rotation.set(0.12, 0, -0.2);
+      const segments = 12;
+      const cone = new THREE.ConeGeometry(0.088, 0.3, segments, 1, true).toNonIndexed();
+      const stripes = [new THREE.Color(look.hatColor), new THREE.Color('#fff4f8')];
+      const colors: number[] = [];
+      for (let tri = 0; tri < cone.getAttribute('position').count / 3; tri++) {
+        const c = stripes[tri % 2];
+        colors.push(c.r, c.g, c.b, c.r, c.g, c.b, c.r, c.g, c.b);
+      }
+      cone.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+      const shell = new THREE.Mesh(cone, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+      shell.position.y = 0.15;
+      // The band wraps the base all the way round, just outside the cone.
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.086, 0.094, 0.035, segments), mat('#ffe14d'));
+      band.position.y = 0.017;
+      const pom = new THREE.Mesh(new THREE.IcosahedronGeometry(0.042, 1), mat('#ffe14d'));
+      pom.position.y = 0.3;
+      hat.add(shell, band, pom);
+      this.head.add(hat);
     } else if (look.hat === 'cap') {
       const cap = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2), mat(look.hatColor));
       cap.position.y = 0.17;
@@ -234,25 +442,33 @@ export class Character {
     this.rArm = arm(1);
     this.lArm = arm(-1);
 
-    // The disc in the right hand: a flattened cylinder gripped at its rim.
+    // The disc in the right hand: a flattened cylinder gripped at its rim, so it sits out past the
+    // fingers.
     this.handDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.105, 0.02, 16), this.discMat);
-    this.handDisc.position.set(0, -0.33, -0.06);
+    this.handDisc.position.set(0, -0.37, 0);
     this.rArm.lower.add(this.handDisc);
 
     this.root.add(this.hips);
     this.root.traverse((o) => {
-      if (o instanceof THREE.Mesh) o.castShadow = true;
+      if (o instanceof THREE.Mesh && !o.userData.noShadow) o.castShadow = true;
     });
-    this.apply(POSES.rest, 0);
+    this.apply(REST, 0);
   }
 
-  /** Shoulder, elbow and hand of each arm in the chest's frame (after the last pose). */
-  armSegments(): ArmSegments {
+  /** Shoulder, elbow and hand of each arm (after the last pose), in the chest's frame or the
+   *  root's (facing -z, the throw direction). */
+  armSegments(frame: 'chest' | 'root' = 'chest'): ArmSegments {
     this.root.updateMatrixWorld(true);
-    const toChest = this.chest.matrixWorld.clone().invert();
-    const pt = (o: THREE.Object3D, y = 0) => o.localToWorld(new THREE.Vector3(0, y, 0)).applyMatrix4(toChest);
+    const to = (frame === 'chest' ? this.chest : this.root).matrixWorld.clone().invert();
+    const pt = (o: THREE.Object3D, y = 0) => o.localToWorld(new THREE.Vector3(0, y, 0)).applyMatrix4(to);
     const limb = (l: Limb): [THREE.Vector3, THREE.Vector3, THREE.Vector3] => [pt(l.upper), pt(l.lower), pt(l.lower, -0.28)];
     return { right: limb(this.rArm), left: limb(this.lArm) };
+  }
+
+  /** Center of the disc in the hand (after the last pose), in the root's frame. */
+  handDiscPosition(): THREE.Vector3 {
+    this.root.updateMatrixWorld(true);
+    return this.root.worldToLocal(this.handDisc.getWorldPosition(new THREE.Vector3()));
   }
 
   setDiscColor(color: string): void {
@@ -271,17 +487,17 @@ export class Character {
    * time (seconds) drives the idle breathing.
    */
   pose(style: ThrowAnim, reach: number, follow: number | null, time: number): void {
-    const set = POSES[style];
-    const rest = style === 'putt' ? POSES.putt.rest : POSES.rest;
+    const set = THROWS[style];
     let p: Pose;
     if (follow === null) {
-      p = lerpPose(rest, set.reach, smooth(Math.min(1, reach)));
-    } else if (follow < RELEASE_AT) {
-      p = lerpPose(set.reach, set.release, smooth(follow / RELEASE_AT));
-    } else if (follow < 1) {
-      p = lerpPose(set.release, set.follow, smooth((follow - RELEASE_AT) / (1 - RELEASE_AT)));
+      p = lerpPose(set.rest, set.reach, smooth(Math.min(1, reach)));
     } else {
-      p = lerpPose(set.follow, rest, smooth(Math.min(1, (follow - 1) / 0.6)));
+      const keys: [number, Pose][] = [[0, set.reach], ...set.swing, [1.6, set.rest]];
+      const times = keys.map(([t]) => t);
+      p = blend(
+        keys.map(([, k]) => k),
+        (values) => monotoneCubic(times, values, follow),
+      );
     }
     this.apply(p, follow === null && reach === 0 ? time : 0);
   }
@@ -297,9 +513,9 @@ export class Character {
     };
     this.hips.position.y = 0.08 + Math.min(legHeight(p.rLeg), legHeight(p.lLeg));
     this.hips.rotation.y = p.hips;
-    this.chest.rotation.set(-p.lean + breathe, p.torso, 0);
-    // The head stays on the target while the body turns.
-    this.head.rotation.set(p.lean * 0.6, -(p.hips + p.torso) * 0.75, 0);
+    this.chest.rotation.set(-p.lean + breathe, p.torso, -p.tilt);
+    // The head stays on the target, and roughly level, while the body turns and bends.
+    this.head.rotation.set(p.lean * 0.6, -(p.hips + p.torso) * 0.75, p.tilt * 0.6);
 
     for (const [leg, swing, side] of [
       [this.rLeg, p.rLeg, 1],
@@ -312,19 +528,44 @@ export class Character {
     const aim = (limb: Limb, a: ArmPose, side: number) => {
       // The shoulder joint rolls forward and toward the middle as `pro` rises.
       limb.upper.position.set(side * (0.24 - 0.1 * a.pro), 0.47, -0.2 * a.pro);
-      const az = THREE.MathUtils.degToRad(a.az);
-      const el = THREE.MathUtils.degToRad(a.el);
-      const dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), -Math.sin(el), -Math.cos(az) * Math.cos(el));
-      limb.upper.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir);
-      limb.lower.rotation.set(a.elbow, 0, 0);
+      const upper = armDirection(upperDir, a.az, a.el);
+      const fore = armDirection(foreDir, a.faz, a.fel);
+      // The elbow hinges about the upper arm's x axis, swinging the forearm toward the upper arm's
+      // -z. Turn the upper arm about its length so -z points where the forearm goes. (A nearly
+      // straight arm leans on a little "forward" so the turn doesn't flip about.)
+      const z = basisZ.copy(fore).addScaledVector(FORWARD, 0.02);
+      z.addScaledVector(upper, -z.dot(upper)).normalize().negate();
+      const y = basisY.copy(upper).negate();
+      const x = basisX.crossVectors(y, z);
+      limb.upper.quaternion.setFromRotationMatrix(basis.makeBasis(x, y, z));
+      limb.lower.rotation.set(upper.angleTo(fore), 0, 0);
     };
     aim(this.rArm, p.r, 1);
     aim(this.lArm, p.l, -1);
 
     // Keep the held disc flat (level with the character), whatever the arm is doing.
     this.root.updateMatrixWorld(true);
-    const rootQ = this.root.getWorldQuaternion(new THREE.Quaternion());
-    const parentQ = this.rArm.lower.getWorldQuaternion(new THREE.Quaternion());
+    this.root.getWorldQuaternion(rootQ);
+    this.rArm.lower.getWorldQuaternion(parentQ);
     this.handDisc.quaternion.copy(parentQ.invert().multiply(rootQ));
   }
+}
+
+let poser: Character | null = null;
+const releasePoints = new Map<ThrowAnim, THREE.Vector3>();
+
+/**
+ * Where the disc leaves the hand, in the thrower's frame (x right, y up, -z toward the target),
+ * so the flight can start right there instead of jumping at the release. Fixed per throw style,
+ * so it costs one posing of a spare character and keeps replays deterministic.
+ */
+export function releasePoint(style: ThrowAnim): THREE.Vector3 {
+  let p = releasePoints.get(style);
+  if (!p) {
+    poser ??= new Character();
+    poser.pose(style, 0, RELEASE_AT, 0);
+    p = poser.handDiscPosition();
+    releasePoints.set(style, p);
+  }
+  return p.clone();
 }
