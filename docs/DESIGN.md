@@ -56,34 +56,37 @@ the character, props and jet. No paid assets, no licensing questions.
 ## 3. Hole 1 (North SeaTac Park)
 
 From the UDisc map: **Par 3, 360 ft (~110 m)**, tee at the south end by the road, throwing north
-toward the C pin, dead straight. Distances are measured off the satellite view at ~0.19 m per
-pixel and the look comes from the tee shot in the Santtu Disc Golf playthrough
-(youtube.com/watch?v=3KfmGowbGio, 0:23). Numbers are still **(verify)**.
+toward the C pin. The layout is traced from a satellite view Alex marked up (open space, the two
+big trees, the row of little trees and the two lines round them), scaled off the 360 ft tee-to-C
+line at about 0.089 m per pixel. The look comes from the tee shot in the Santtu Disc Golf
+playthrough (youtube.com/watch?v=3KfmGowbGio, 0:23). Numbers are estimates.
 
 **What the tee view shows:**
 
 - A **concrete tee pad** with room for an x-step run-up.
-- A **mown grass lane about 10 to 15 m wide**, with a worn **gravel and dirt path** running
-  straight down the middle of it.
+- A **mown grass lane** that opens out as it goes: narrow by the tee, then about 25 m wide from
+  25 m out, offset to the right of the tee line. A worn **gravel and dirt path** runs up it.
 - **Left:** a wall of chest-high blackberry bramble and young trees. Missing left means a scramble
   out of the brush.
 - **Right:** big leafy deciduous trees right at the edge of the lane. Near the tee their branches
   lean out over the right side of the lane, so a high anhyzer line gets clipped early.
-- **Down the lane:** the lane stays open and runs between trees toward the basket. The
-  mid-fairway canopy from the map is the trees framing the lane, so it is a **gap shot**, not a
-  tree to throw around. Overhanging branches put a low-ish ceiling on it, which rewards a flat,
-  controlled line over a big sky hyzer.
+- **The feature: two big trees** stand between the lane and the basket, 65 to 90 m out. The left
+  one is square on the tee line, so the straight shot is blocked. A **row of little trees** runs
+  off to the left of it, closing that side, so there are **two ways round**: through the ~5 m gap
+  between the big trees (an anhyzer that turns through and fades back in works well), or right of
+  the right tree through the open strip and back left to the basket (longer, but more room).
+- **Around the basket:** a big open space, roughly 24 m left to 30 m right of the pin.
 - **Flat**, as far as the video shows. Overcast PNW sky.
 - The video confirms **multiple pin positions** for this hole.
 
 ```
               N  (+z)
-      woods   [C]   woods          z ~110 m  basket C, trees close behind and left
-      ####    :|:   #######
-     #####    :|:   ########       z 75-110  trees both sides, tightening near the pin
-      ###     :|:   #######        z 60-80   lane runs between trees (gap shot, branches overhead)
-   bramble    :|:    #######
-   ,,,,,,,    :|:     ######       z 20-60   bramble left, tree wall right, path down the middle
+   woods     open  [C]  open   ### z 90-130  open space round the basket
+   ####       .    .     .   ####
+   ###  ....  (L)  :  (R)  .  ###  z 65-90   two big trees: through the gap or right of (R)
+   ##  oooo    .   :   ##   .  ##  z 64-72   row of little trees (o) closes the left side
+   bramble    :|:          ######
+   ,,,,,,,    :|:  lane     #####  z 20-60   bramble left, wide open lane, path up the middle
    ,,,,,,,    :|:  (O)  ####       z ~17     big leafy tree, branches overhang the right edge
   OB fence     |       ####
   (houses)    [T]                  z 0       tee pad
@@ -98,13 +101,15 @@ lives in `client/src/sim/frame.ts`.
 |---|---|
 | Tee pad | (0, 0), facing north |
 | Basket (pin C) | (0, 109.7) |
-| Right tree wall | starts x +5 to +8 m along most of the hole |
-| Big round tree near tee | (+10.7, 16.5), canopy radius ~8 m |
-| Mown lane | about x -6 to +6, full length |
-| Gravel path | about x -1 to +1, tee to basket |
-| Lane between trees, branches overhead | x -5 to +5, z 60 to 80 |
-| Left bramble and brush (heavy rough) | x -51 to -6, z 2 to 58 |
-| Left woods near basket | x -17 to -2, z 75 to 110 |
+| Big round tree near tee | (+10.7, 16.5), canopy radius ~7 m |
+| Mown lane (open space) | x -9 to +17, z 25 to 63; narrow by the tee |
+| Left big tree | (-0.9, 73.6), on the tee line |
+| Right big tree | (+7.8, 83.8); ~5 m gap to the left tree |
+| Row of little trees | (-15, 64) to (-5, 72) |
+| Way round the right | x +13 to +20, z 56 to 90 |
+| Open space round the basket | x -24 to +30, z 72 to 129 |
+| Gravel path | up the lane, through the gap, to the basket |
+| Left bramble and brush (heavy rough) | x -46 to -7, z 2 to 60 |
 | West property line (OB) | x < -59 |
 | Road behind tee (OB) | z -6 to -15 |
 
