@@ -131,8 +131,9 @@ export const TUNING = {
   cl0PerGlide: 0.017,
   clAlpha: 1.25,
   clAlphaPerGlide: 0.06,
-  /** Max roll either way, radians. */
-  maxRoll: (85 * Math.PI) / 180,
+  /** Most a disc tilts from level in flight, radians. Roll eases off toward it, and the turning
+   *  flight (which tips the disc's world-fixed attitude further over) can't carry it past. */
+  maxTilt: (60 * Math.PI) / 180,
 };
 
 const SURFACE_FRICTION: Record<Surface, number> = {
@@ -194,6 +195,15 @@ function rotateAbout(v: V3, axis: V3, angle: number): V3 {
 function bankOf(normal: V3, heading: V3): number {
   const right = cross(heading, UP);
   return Math.asin(Math.max(-1, Math.min(1, -dot(normal, right))));
+}
+
+/** `normal`, tipped back toward level if it leans further than `max` from straight up. */
+function limitTilt(normal: V3, max: number): V3 {
+  if (normal.y >= Math.cos(max)) return normal;
+  const flat = Math.hypot(normal.x, normal.z);
+  if (flat < 1e-9) return normal;
+  const k = Math.sin(max) / flat;
+  return v3(normal.x * k, Math.cos(max), normal.z * k);
 }
 
 /** Disc normal from heading, pitch (nose up positive) and roll (left side down positive). */
@@ -280,11 +290,12 @@ export function simulateThrow(input: ThrowInput, world: SimWorld, wind?: Wind): 
       // The disc's attitude stays fixed in space apart from this roll about the flight direction.
       // So as the flight curves, the launch's nose-up tilt turns into extra bank and the angle of
       // attack falls away: a fading disc loses lift and drops, instead of curling on.
-      const dRoll = side * (fadeRate - turnRate) * wobble * DT;
+      let dRoll = side * (fadeRate - turnRate) * wobble * DT;
       const bank = bankOf(normal, heading);
-      if (Math.abs(bank + dRoll) < TUNING.maxRoll || Math.abs(bank + dRoll) < Math.abs(bank)) {
-        normal = normalize(rotateAbout(normal, heading, -dRoll));
-      }
+      const tilt = Math.acos(Math.max(-1, Math.min(1, normal.y)));
+      if (Math.abs(bank + dRoll) > Math.abs(bank)) dRoll *= 1 - smoothstep(0.6 * TUNING.maxTilt, TUNING.maxTilt, tilt);
+      normal = normalize(rotateAbout(normal, heading, -dRoll));
+      normal = limitTilt(normal, TUNING.maxTilt);
 
       // Lift and drag.
       const alpha = Math.asin(Math.max(-1, Math.min(1, -dot(airDir, normal))));
