@@ -17,6 +17,7 @@ import { buildDiscMesh, paintDisc } from '../world/props';
 import { followSun } from '../world/scene';
 import { formatFeet, maxStrokes, scoreName } from './score';
 import { AIM_LIMIT, HYZER_LIMIT, MAX_POWER, type ShotSettings } from './settings';
+import { autoPuttPower, releaseFrom } from './shot';
 
 type Phase = 'aim' | 'flight' | 'holed';
 
@@ -188,13 +189,7 @@ export class Game {
     const putt = this.isPutt();
     // The flight starts where the thrower's hand lets go (out to the right of the body), and is
     // aimed from there, so a putt off the right hand still lines up on the basket.
-    const fwd = headingToDir(this.basketHeading() + s.aimOffsetDeg);
-    const hand = releasePoint(putt ? 'putt' : s.style);
-    const from = v3(
-      this.lie.x - fwd.z * hand.x - fwd.x * hand.z,
-      this.lie.y + hand.y,
-      this.lie.z + fwd.x * hand.x - fwd.z * hand.z,
-    );
+    const from = releaseFrom(this.lie, this.basketHeading() + s.aimOffsetDeg, releasePoint(putt ? 'putt' : s.style));
     const b = this.hole.world.basket;
     const aimDeg = dirToHeading(v3(b.x - from.x, 0, b.z - from.z)) + s.aimOffsetDeg;
     return {
@@ -274,25 +269,8 @@ export class Game {
    * ring while putting, so a putt doesn't inherit the drive's power.
    */
   private autoPuttPower(discId: string): number {
-    const b = this.hole.world.basket;
-    const target = b.base + 1.05;
-    const heightAtBasket = (power: number) => {
-      const input = this.shotInput({ ...this.settings, discId, aimOffsetDeg: 0 }, power, 1);
-      const dist = Math.hypot(b.x - input.from.x, b.z - input.from.z);
-      const r = simulateThrow(input, { ...this.hole.world, basket: { ...b, z: b.z + 1e4 } }, this.wind);
-      for (const sample of r.path) {
-        if (Math.hypot(sample.p[0] - input.from.x, sample.p[2] - input.from.z) >= dist - 0.2) return sample.p[1];
-      }
-      return -Infinity; // fell short
-    };
-    let lo = 0.05;
-    let hi = 1;
-    for (let i = 0; i < 14; i++) {
-      const mid = (lo + hi) / 2;
-      if (heightAtBasket(mid) < target) lo = mid;
-      else hi = mid;
-    }
-    return Math.round(((lo + hi) / 2) * 100) / 100;
+    const settings = { ...this.settings, discId, aimOffsetDeg: 0 };
+    return autoPuttPower((power) => this.shotInput(settings, power, 1), this.hole.world, this.wind);
   }
 
   private look(): void {
