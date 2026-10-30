@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { Character, RELEASE_AT, type ThrowAnim } from '../client/src/world/character';
+import { Character, RELEASE_AT, releasePoint, type ThrowAnim } from '../client/src/world/character';
 
 // Torso and head as the character builds them, in the chest's frame.
 const TORSO_BOTTOM = 0;
@@ -74,6 +74,15 @@ describe('thrower poses', () => {
       for (let f = dt; f <= 1; f += dt) top = Math.max(top, speed(f));
       expect(speed(RELEASE_AT), style).toBeGreaterThan(0.85 * top);
     }
+  });
+
+  it('gives the game the spot where the disc leaves the hand, so the flight starts there', () => {
+    for (const style of ['backhand', 'forehand', 'putt'] as const) {
+      c.pose(style, 0, RELEASE_AT, 0);
+      expect(releasePoint(style).distanceTo(c.handDiscPosition()), style).toBeLessThan(1e-9);
+      expect(releasePoint(style).x, style).toBeGreaterThan(0.1); // out on the throwing side
+    }
+    expect(releasePoint('forehand').y).toBeLessThan(releasePoint('backhand').y);
   });
 
   it('releases at the point the game starts the flight', () => {

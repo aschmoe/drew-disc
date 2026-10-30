@@ -185,11 +185,21 @@ function monotoneCubic(times: number[], values: number[], t: number): number {
 const smooth = (t: number) => t * t * (3 - 2 * t);
 const FORWARD = new THREE.Vector3(0, 0, -1);
 
-/** Unit vector for an arm direction (azimuth, degrees below horizontal) in the chest's frame. */
-function armDirection(azDeg: number, elDeg: number): THREE.Vector3 {
+// Scratch objects for posing, reused every frame.
+const upperDir = new THREE.Vector3();
+const foreDir = new THREE.Vector3();
+const basisX = new THREE.Vector3();
+const basisY = new THREE.Vector3();
+const basisZ = new THREE.Vector3();
+const basis = new THREE.Matrix4();
+const rootQ = new THREE.Quaternion();
+const parentQ = new THREE.Quaternion();
+
+/** Sets `out` to an arm direction (azimuth, degrees below horizontal) in the chest's frame. */
+function armDirection(out: THREE.Vector3, azDeg: number, elDeg: number): THREE.Vector3 {
   const az = THREE.MathUtils.degToRad(azDeg);
   const el = THREE.MathUtils.degToRad(elDeg);
-  return new THREE.Vector3(Math.sin(az) * Math.cos(el), -Math.sin(el), -Math.cos(az) * Math.cos(el));
+  return out.set(Math.sin(az) * Math.cos(el), -Math.sin(el), -Math.cos(az) * Math.cos(el));
 }
 const mat = (color: string) => new THREE.MeshLambertMaterial({ color, flatShading: true });
 
@@ -335,6 +345,12 @@ export class Character {
     return { right: limb(this.rArm), left: limb(this.lArm) };
   }
 
+  /** Center of the disc in the hand (after the last pose), in the root's frame. */
+  handDiscPosition(): THREE.Vector3 {
+    this.root.updateMatrixWorld(true);
+    return this.root.worldToLocal(this.handDisc.getWorldPosition(new THREE.Vector3()));
+  }
+
   setDiscColor(color: string): void {
     this.discMat.color.set(color);
   }
@@ -392,17 +408,16 @@ export class Character {
     const aim = (limb: Limb, a: ArmPose, side: number) => {
       // The shoulder joint rolls forward and toward the middle as `pro` rises.
       limb.upper.position.set(side * (0.24 - 0.1 * a.pro), 0.47, -0.2 * a.pro);
-      const upper = armDirection(a.az, a.el);
-      const fore = armDirection(a.faz, a.fel);
+      const upper = armDirection(upperDir, a.az, a.el);
+      const fore = armDirection(foreDir, a.faz, a.fel);
       // The elbow hinges about the upper arm's x axis, swinging the forearm toward the upper arm's
       // -z. Turn the upper arm about its length so -z points where the forearm goes. (A nearly
       // straight arm leans on a little "forward" so the turn doesn't flip about.)
-      const toward = fore.clone().addScaledVector(FORWARD, 0.02);
-      toward.addScaledVector(upper, -toward.dot(upper)).normalize();
-      const y = upper.clone().negate();
-      const z = toward.negate();
-      const x = new THREE.Vector3().crossVectors(y, z);
-      limb.upper.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+      const z = basisZ.copy(fore).addScaledVector(FORWARD, 0.02);
+      z.addScaledVector(upper, -z.dot(upper)).normalize().negate();
+      const y = basisY.copy(upper).negate();
+      const x = basisX.crossVectors(y, z);
+      limb.upper.quaternion.setFromRotationMatrix(basis.makeBasis(x, y, z));
       limb.lower.rotation.set(upper.angleTo(fore), 0, 0);
     };
     aim(this.rArm, p.r, 1);
@@ -410,8 +425,27 @@ export class Character {
 
     // Keep the held disc flat (level with the character), whatever the arm is doing.
     this.root.updateMatrixWorld(true);
-    const rootQ = this.root.getWorldQuaternion(new THREE.Quaternion());
-    const parentQ = this.rArm.lower.getWorldQuaternion(new THREE.Quaternion());
+    this.root.getWorldQuaternion(rootQ);
+    this.rArm.lower.getWorldQuaternion(parentQ);
     this.handDisc.quaternion.copy(parentQ.invert().multiply(rootQ));
   }
+}
+
+let poser: Character | null = null;
+const releasePoints = new Map<ThrowAnim, THREE.Vector3>();
+
+/**
+ * Where the disc leaves the hand, in the thrower's frame (x right, y up, -z toward the target),
+ * so the flight can start right there instead of jumping at the release. Fixed per throw style,
+ * so it costs one posing of a spare character and keeps replays deterministic.
+ */
+export function releasePoint(style: ThrowAnim): THREE.Vector3 {
+  let p = releasePoints.get(style);
+  if (!p) {
+    poser ??= new Character();
+    poser.pose(style, 0, RELEASE_AT, 0);
+    p = poser.handDiscPosition();
+    releasePoints.set(style, p);
+  }
+  return p.clone();
 }

@@ -11,7 +11,7 @@ import { v3, type V3 } from '../sim/vec';
 import { Controls, type ThrowGesture } from '../ui/controls';
 import { DebugPanel } from '../ui/debugPanel';
 import { Overlay, type ThrowRecord } from '../ui/overlay';
-import { Character, RELEASE_AT, type ThrowAnim } from '../world/character';
+import { Character, RELEASE_AT, releasePoint, type ThrowAnim } from '../world/character';
 import { Effects } from '../world/effects';
 import { buildDiscMesh, paintDisc } from '../world/props';
 import { followSun } from '../world/scene';
@@ -186,9 +186,17 @@ export class Game {
 
   private shotInput(s: ShotSettings, power: number, seed: number, flickDeg = 0, spin = 1): ThrowInput {
     const putt = this.isPutt();
-    const aimDeg = this.basketHeading() + s.aimOffsetDeg;
-    const fwd = headingToDir(aimDeg);
-    const release = putt ? 1.0 : 1.1;
+    // The flight starts where the thrower's hand lets go (out to the right of the body), and is
+    // aimed from there, so a putt off the right hand still lines up on the basket.
+    const fwd = headingToDir(this.basketHeading() + s.aimOffsetDeg);
+    const hand = releasePoint(putt ? 'putt' : s.style);
+    const from = v3(
+      this.lie.x - fwd.z * hand.x - fwd.x * hand.z,
+      this.lie.y + hand.y,
+      this.lie.z + fwd.x * hand.x - fwd.z * hand.z,
+    );
+    const b = this.hole.world.basket;
+    const aimDeg = dirToHeading(v3(b.x - from.x, 0, b.z - from.z)) + s.aimOffsetDeg;
     return {
       discId: s.discId,
       style: s.style,
@@ -199,7 +207,7 @@ export class Game {
       hyzerDeg: putt ? 0 : s.hyzerDeg,
       flickDeg,
       spin,
-      from: v3(this.lie.x + fwd.x * 0.4, this.lie.y + release, this.lie.z + fwd.z * 0.4),
+      from,
       seed,
     };
   }
@@ -268,9 +276,9 @@ export class Game {
   private autoPuttPower(discId: string): number {
     const b = this.hole.world.basket;
     const target = b.base + 1.05;
-    const dist = this.basketDistance();
     const heightAtBasket = (power: number) => {
       const input = this.shotInput({ ...this.settings, discId, aimOffsetDeg: 0 }, power, 1);
+      const dist = Math.hypot(b.x - input.from.x, b.z - input.from.z);
       const r = simulateThrow(input, { ...this.hole.world, basket: { ...b, z: b.z + 1e4 } }, this.wind);
       for (const sample of r.path) {
         if (Math.hypot(sample.p[0] - input.from.x, sample.p[2] - input.from.z) >= dist - 0.2) return sample.p[1];

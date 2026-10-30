@@ -19,7 +19,8 @@ const sheet: { label: string; style: ThrowAnim; reach: number; follow: number | 
 
 // ?swing=forehand (or backhand, putt) shows that throw as a filmstrip instead, frame by frame
 // from the end of the reach-back to the top of the follow-through.
-const swing = new URLSearchParams(location.search).get('swing') as ThrowAnim | null;
+const param = new URLSearchParams(location.search).get('swing');
+const swing = (['backhand', 'forehand', 'putt'] as const).find((s) => s === param) ?? null;
 const poses = swing
   ? [0, 0.1, 0.2, 0.275, RELEASE_AT, 0.45, 0.6, 0.8, 1].map((f) => ({
       label: f === RELEASE_AT ? `${f} release` : String(f),
