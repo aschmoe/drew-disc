@@ -14,7 +14,11 @@ export interface CharacterLook {
   shirt: string;
   shorts: string;
   skin: string;
+  /** Hair color, also used for the eyebrows. */
   hair: string;
+  hairStyle: 'short' | 'bald';
+  /** Beard and mustache color, or null for clean-shaven. */
+  beard: string | null;
   shoes: string;
   hat: 'party' | 'cap' | 'none';
   hatColor: string;
@@ -24,7 +28,9 @@ export const DEFAULT_LOOK: CharacterLook = {
   shirt: '#2f7de1',
   shorts: '#5d6670',
   skin: '#e2b48f',
-  hair: '#6b4a2f',
+  hair: '#4a3628',
+  hairStyle: 'bald',
+  beard: '#6e5747',
   shoes: '#f2f2ee',
   hat: 'party',
   hatColor: '#ff3d8b',
@@ -206,17 +212,25 @@ const mat = (color: string) => new THREE.MeshLambertMaterial({ color, flatShadin
 
 /**
  * A friendly cartoon face, merged into one mesh (one draw call, no shadow): big white eyes with
- * dark pupils and a glint, eyebrows, a small nose, rosy cheeks and a smile. Placed on the head
- * sphere (radius 0.14, centered 0.13 up), facing -z.
+ * dark pupils and a glint, eyebrows, a small nose, a big toothy grin and, when the look has one, a
+ * short beard and mustache. Placed on the head sphere (radius 0.14, centered 0.13 up), facing -z.
  */
 function faceFeatures(look: CharacterLook): THREE.Mesh {
   const parts: THREE.BufferGeometry[] = [];
-  const add = (geo: THREE.BufferGeometry, color: string, pos: [number, number, number], scale: [number, number, number] = [1, 1, 1], rot: [number, number, number] = [0, 0, 0]) => {
+  const add = (
+    geo: THREE.BufferGeometry,
+    color: string,
+    pos: [number, number, number],
+    scale: [number, number, number] = [1, 1, 1],
+    rot: [number, number, number] = [0, 0, 0],
+    faceted = false,
+  ) => {
     const g = geo.index ? geo.toNonIndexed() : geo;
     g.deleteAttribute('uv');
     g.applyMatrix4(
       new THREE.Matrix4().compose(new THREE.Vector3(...pos), new THREE.Quaternion().setFromEuler(new THREE.Euler(...rot)), new THREE.Vector3(...scale)),
     );
+    if (faceted) g.computeVertexNormals(); // unshared vertices, so each triangle gets its own normal
     const c = new THREE.Color(color);
     g.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: g.getAttribute('position').count }, () => [c.r, c.g, c.b]).flat(), 3));
     parts.push(g);
@@ -232,14 +246,54 @@ function faceFeatures(look: CharacterLook): THREE.Mesh {
     add(new THREE.SphereGeometry(0.015, 10, 6), '#2b1d14', on(0.046 * side, 0.014, 0.004), [1, 1.1, 0.6]);
     add(new THREE.SphereGeometry(0.005, 6, 4), '#ffffff', on(0.046 * side + 0.005, 0.021, 0.01));
     add(new THREE.BoxGeometry(0.042, 0.009, 0.01), look.hair, on(0.05 * side, 0.058, 0.002), [1, 1, 1], [0, 0, -0.18 * side]);
-    add(new THREE.SphereGeometry(0.022, 10, 6), '#f4a19a', on(0.08 * side, -0.035, -0.006), [1, 0.8, 0.4]);
   }
   add(new THREE.SphereGeometry(0.015, 10, 6), '#e3a684', on(0, -0.012, 0.005));
-  // The smile is a row of beads along an arc, each one on the surface, so it hugs the face.
-  const bead = new THREE.SphereGeometry(0.006, 6, 4);
+
+  // A short beard: a faceted shell over the jaw and chin from ear to ear, its top edge curving
+  // from the sideburns down under the cheeks, each facet a slightly different shade like stubble.
+  if (look.beard) {
+    const shell = new THREE.SphereGeometry(0.1428, 28, 16, Math.PI, Math.PI, 0.5 * Math.PI, 0.5 * Math.PI).toNonIndexed();
+    const pos = shell.getAttribute('position');
+    const kept: number[] = [];
+    const colors: number[] = [];
+    const base = new THREE.Color(look.beard);
+    const c = new THREE.Color();
+    for (let tri = 0; tri < pos.count / 3; tri++) {
+      let x = 0;
+      let y = 0;
+      let z = 0;
+      for (let v = 0; v < 3; v++) {
+        x += pos.getX(tri * 3 + v) / 3;
+        y += pos.getY(tri * 3 + v) / 3;
+        z += pos.getZ(tri * 3 + v) / 3;
+      }
+      const front = Math.max(0, -z) / Math.hypot(x, z); // 1 straight ahead, 0 at the ears
+      const top = -0.012 - 0.03 * front * front; // jawline height, down from ear level to the cheeks
+      if (y > top) continue;
+      const shade = 0.88 + 0.24 * (((tri * 2654435761) >>> 0) / 2 ** 32);
+      c.copy(base).multiplyScalar(shade);
+      for (let v = 0; v < 3; v++) {
+        kept.push(pos.getX(tri * 3 + v), pos.getY(tri * 3 + v) + 0.13, pos.getZ(tri * 3 + v));
+        colors.push(c.r, c.g, c.b);
+      }
+    }
+    const beard = new THREE.BufferGeometry();
+    beard.setAttribute('position', new THREE.Float32BufferAttribute(kept, 3));
+    beard.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    beard.computeVertexNormals();
+    parts.push(beard);
+  }
+
+  // The grin and the mustache are rows of beads, each placed on the surface so they hug the face.
+  const bead = (r: number) => new THREE.SphereGeometry(r, 6, 4);
+  const arc = (a: number) => ({ x: 0.032 * Math.sin(a), top: -0.036 - 0.004 * Math.cos(a), bottom: -0.04 - 0.022 * Math.cos(a) });
   for (let i = 0; i <= 24; i++) {
     const a = (i / 24 - 0.5) * 2.3;
-    add(bead.clone(), '#7a3328', on(0.032 * Math.sin(a), -0.04 - 0.02 * Math.cos(a), 0.001));
+    const { x, top, bottom } = arc(a);
+    for (let k = 1; k < 4; k++) add(bead(0.0065), '#f7f3ea', on(x, top + ((bottom - top) * k) / 4, 0.003));
+    add(bead(0.005), '#5a2a22', on(x, top, 0.004));
+    add(bead(0.006), '#5a2a22', on(x, bottom, 0.004));
+    if (look.beard) add(bead(0.0065), look.beard, on(0.04 * Math.sin(a), -0.027 - 0.005 * Math.cos(a), 0.004));
   }
   const mesh = new THREE.Mesh(mergeGeometries(parts), new THREE.MeshLambertMaterial({ vertexColors: true }));
   mesh.userData.noShadow = true;
@@ -318,10 +372,14 @@ export class Character {
     // up off the brow so it doesn't shade the eyes.
     const face = new THREE.Mesh(new THREE.IcosahedronGeometry(0.14, 2), new THREE.MeshLambertMaterial({ color: look.skin }));
     face.position.y = 0.13;
-    // One cap of hair over the top and back, down to the nape, with the hairline above the brows.
-    const hair = new THREE.Mesh(new THREE.IcosahedronGeometry(0.15, 1), mat(look.hair));
-    hair.scale.set(1, 0.9, 0.95);
-    hair.position.set(0, 0.17, 0.045);
+    // Short hair is one cap over the top and back, down to the nape, with the hairline above the
+    // brows.
+    if (look.hairStyle === 'short') {
+      const hair = new THREE.Mesh(new THREE.IcosahedronGeometry(0.15, 1), mat(look.hair));
+      hair.scale.set(1, 0.9, 0.95);
+      hair.position.set(0, 0.17, 0.045);
+      this.head.add(hair);
+    }
     const earGeo = new THREE.SphereGeometry(0.03, 8, 6);
     for (const side of [-1, 1]) {
       const ear = new THREE.Mesh(earGeo, skin);
@@ -329,11 +387,12 @@ export class Character {
       ear.position.set(0.138 * side, 0.12, -0.005);
       this.head.add(ear);
     }
-    this.head.add(face, hair, faceFeatures(look));
+    this.head.add(face, faceFeatures(look));
     if (look.hat === 'party') {
-      // A striped cone on the crown, tilted about its own base so it stays seated on the hair.
+      // A striped cone on the crown, tilted about its own base so it stays seated on the head
+      // (lower on a bald head, where there's no hair under it).
       const hat = new THREE.Group();
-      hat.position.set(0.01, 0.255, 0.015);
+      hat.position.set(0.01, look.hairStyle === 'bald' ? 0.235 : 0.255, 0.015);
       hat.rotation.set(0.12, 0, -0.2);
       const segments = 12;
       const cone = new THREE.ConeGeometry(0.088, 0.3, segments, 1, true).toNonIndexed();
