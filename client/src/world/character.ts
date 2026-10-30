@@ -6,6 +6,7 @@
 // the root toward the aim).
 
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export type ThrowAnim = 'backhand' | 'forehand' | 'putt';
 
@@ -203,6 +204,48 @@ function armDirection(out: THREE.Vector3, azDeg: number, elDeg: number): THREE.V
 }
 const mat = (color: string) => new THREE.MeshLambertMaterial({ color, flatShading: true });
 
+/**
+ * A friendly cartoon face, merged into one mesh (one draw call, no shadow): big white eyes with
+ * dark pupils and a glint, eyebrows, a small nose, rosy cheeks and a smile. Placed on the head
+ * sphere (radius 0.14, centered 0.13 up), facing -z.
+ */
+function faceFeatures(look: CharacterLook): THREE.Mesh {
+  const parts: THREE.BufferGeometry[] = [];
+  const add = (geo: THREE.BufferGeometry, color: string, pos: [number, number, number], scale: [number, number, number] = [1, 1, 1], rot: [number, number, number] = [0, 0, 0]) => {
+    const g = geo.index ? geo.toNonIndexed() : geo;
+    g.deleteAttribute('uv');
+    g.applyMatrix4(
+      new THREE.Matrix4().compose(new THREE.Vector3(...pos), new THREE.Quaternion().setFromEuler(new THREE.Euler(...rot)), new THREE.Vector3(...scale)),
+    );
+    const c = new THREE.Color(color);
+    g.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: g.getAttribute('position').count }, () => [c.r, c.g, c.b]).flat(), 3));
+    parts.push(g);
+  };
+  // A point on the head's surface, `out` beyond it: x across, y up from the head's center.
+  const on = (x: number, y: number, out = 0): [number, number, number] => {
+    const z = Math.sqrt(Math.max(0, 0.14 ** 2 - x * x - y * y));
+    const k = (0.14 + out) / 0.14;
+    return [x * k, 0.13 + y * k, -z * k];
+  };
+  for (const side of [-1, 1]) {
+    add(new THREE.SphereGeometry(0.027, 12, 8), '#ffffff', on(0.048 * side, 0.018, -0.01), [1, 1.15, 0.55]);
+    add(new THREE.SphereGeometry(0.015, 10, 6), '#2b1d14', on(0.046 * side, 0.014, 0.004), [1, 1.1, 0.6]);
+    add(new THREE.SphereGeometry(0.005, 6, 4), '#ffffff', on(0.046 * side + 0.005, 0.021, 0.01));
+    add(new THREE.BoxGeometry(0.042, 0.009, 0.01), look.hair, on(0.05 * side, 0.058, 0.002), [1, 1, 1], [0, 0, -0.18 * side]);
+    add(new THREE.SphereGeometry(0.022, 10, 6), '#f4a19a', on(0.08 * side, -0.035, -0.006), [1, 0.8, 0.4]);
+  }
+  add(new THREE.SphereGeometry(0.015, 10, 6), '#e3a684', on(0, -0.012, 0.005));
+  // The smile is a row of beads along an arc, each one on the surface, so it hugs the face.
+  const bead = new THREE.SphereGeometry(0.006, 6, 4);
+  for (let i = 0; i <= 24; i++) {
+    const a = (i / 24 - 0.5) * 2.3;
+    add(bead.clone(), '#7a3328', on(0.032 * Math.sin(a), -0.04 - 0.02 * Math.cos(a), 0.001));
+  }
+  const mesh = new THREE.Mesh(mergeGeometries(parts), new THREE.MeshLambertMaterial({ vertexColors: true }));
+  mesh.userData.noShadow = true;
+  return mesh;
+}
+
 interface Limb {
   upper: THREE.Group;
   lower: THREE.Group;
@@ -271,19 +314,22 @@ export class Character {
 
     // Head, hair, face, hat.
     this.head.position.y = 0.6;
-    const face = new THREE.Mesh(new THREE.IcosahedronGeometry(0.14, 1), skin);
+    // The head is smooth-shaded (faceted, its lower facets read as stubble), with the hair sitting
+    // up off the brow so it doesn't shade the eyes.
+    const face = new THREE.Mesh(new THREE.IcosahedronGeometry(0.14, 2), new THREE.MeshLambertMaterial({ color: look.skin }));
     face.position.y = 0.13;
-    const hair = new THREE.Mesh(new THREE.IcosahedronGeometry(0.145, 1), mat(look.hair));
-    hair.scale.set(1, 0.75, 1);
-    hair.position.set(0, 0.18, 0.025);
-    const eye = new THREE.SphereGeometry(0.018, 6, 4);
-    const eyes = mat('#1d1d1d');
+    // One cap of hair over the top and back, down to the nape, with the hairline above the brows.
+    const hair = new THREE.Mesh(new THREE.IcosahedronGeometry(0.15, 1), mat(look.hair));
+    hair.scale.set(1, 0.9, 0.95);
+    hair.position.set(0, 0.17, 0.045);
+    const earGeo = new THREE.SphereGeometry(0.03, 8, 6);
     for (const side of [-1, 1]) {
-      const e = new THREE.Mesh(eye, eyes);
-      e.position.set(0.05 * side, 0.14, -0.125);
-      this.head.add(e);
+      const ear = new THREE.Mesh(earGeo, skin);
+      ear.scale.set(0.45, 1, 0.75);
+      ear.position.set(0.138 * side, 0.12, -0.005);
+      this.head.add(ear);
     }
-    this.head.add(face, hair);
+    this.head.add(face, hair, faceFeatures(look));
     if (look.hat === 'party') {
       // A striped cone on the crown, tilted about its own base so it stays seated on the hair.
       const hat = new THREE.Group();
@@ -345,7 +391,7 @@ export class Character {
 
     this.root.add(this.hips);
     this.root.traverse((o) => {
-      if (o instanceof THREE.Mesh) o.castShadow = true;
+      if (o instanceof THREE.Mesh && !o.userData.noShadow) o.castShadow = true;
     });
     this.apply(REST, 0);
   }

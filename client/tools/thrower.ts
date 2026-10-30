@@ -1,5 +1,6 @@
 // Dev only: every key pose of the thrower, seen from behind like the game camera (top row), from
 // the side with the target to the left (middle row) and from above (bottom row, target up).
+// ?swing=<style> shows one throw frame by frame; ?face shows the head close up.
 
 import * as THREE from 'three';
 import { Character, RELEASE_AT, type ThrowAnim } from '../src/world/character';
@@ -21,7 +22,11 @@ const sheet: { label: string; style: ThrowAnim; reach: number; follow: number | 
 // from the end of the reach-back to the top of the follow-through.
 const param = new URLSearchParams(location.search).get('swing');
 const swing = (['backhand', 'forehand', 'putt'] as const).find((s) => s === param) ?? null;
-const poses = swing
+// ?face shows just the head, close up from the front, three-quarter and side.
+const faceMode = new URLSearchParams(location.search).has('face');
+const poses = faceMode
+  ? []
+  : swing
   ? [0, 0.1, 0.2, 0.275, RELEASE_AT, 0.45, 0.6, 0.8, 1].map((f) => ({
       label: f === RELEASE_AT ? `${f} release` : String(f),
       style: swing,
@@ -76,3 +81,25 @@ const labels = document.createElement('div');
 labels.style.cssText = `display:grid;grid-template-columns:repeat(${poses.length},1fr);width:${W}px;text-align:center;font:12px system-ui`;
 labels.innerHTML = poses.map((p) => `<div>${p.label}</div>`).join('');
 document.body.append(labels);
+
+if (faceMode) {
+  const c = new Character();
+  c.pose('backhand', 0, null, 0);
+  scene.add(c.root);
+  const views: [string, number, number][] = [
+    ['Front', 0, -1],
+    ['Three-quarter', 0.7, -0.7],
+    ['Side', 1, 0],
+  ];
+  const vw = W / views.length;
+  const face = new THREE.PerspectiveCamera(30, vw / H, 0.05, 20);
+  views.forEach(([, x, z], i) => {
+    face.position.set(x * 1.1, 1.78, z * 1.1);
+    face.lookAt(0, 1.74, 0);
+    renderer.setViewport(i * vw, 0, vw, H);
+    renderer.setScissor(i * vw, 0, vw, H);
+    renderer.render(scene, face);
+  });
+  labels.style.gridTemplateColumns = `repeat(${views.length},1fr)`;
+  labels.innerHTML = views.map(([label]) => `<div>${label}</div>`).join('');
+}

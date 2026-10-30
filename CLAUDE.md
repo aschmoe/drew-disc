@@ -23,7 +23,7 @@ npm run build        # typecheck + build to dist/
 - `shared/` holds code for both client and (future) server: the disc catalog in `shared/discs.ts`.
 - `client/tools/` holds dev-only pages, served by `npm run dev` and not built for production:
   `flight-lab.html` (flight tuning), `thrower.html` (every character pose; `?swing=forehand` for a
-  frame-by-frame filmstrip of one throw), `jet.html` (the jet model).
+  frame-by-frame filmstrip of one throw, `?face` for the head close up), `jet.html` (the jet model).
 - Art and sound are procedural (`client/src/world/`, `client/src/audio/sound.ts`): no asset files.
 - `?debug` adds exact sliders, lie jumps (Putt 6 ft, Approach 60 ft) and exposes `window.renderer`
   for draw-call checks. Keep the scene near or under ~200k triangles (shadow pass included).
