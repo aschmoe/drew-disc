@@ -100,6 +100,20 @@ describe('flight model', () => {
     expect(Math.max(...spread) - Math.min(...spread)).toBeGreaterThan(3);
   });
 
+  it('the launch range runs from a low line to a high one', () => {
+    const top = (launchDeg: number) => Math.max(...throwIt({ power: 0.9, launchDeg }).path.map((s) => s.p[1]));
+    const dist = (launchDeg: number) => feet(-throwIt({ power: 0.9, launchDeg }).rest.z);
+    // Lowest launch stays under a tree's branches; highest clears a tall canopy.
+    expect(top(3)).toBeLessThan(3);
+    expect(top(19)).toBeGreaterThan(14);
+    expect(top(9)).toBeGreaterThan(top(3));
+    expect(top(19)).toBeGreaterThan(top(9));
+    // Both ends still fly a real distance, and the default flies furthest of the three.
+    for (const l of [3, 19]) expect(dist(l)).toBeGreaterThan(200);
+    expect(dist(9)).toBeGreaterThan(dist(3));
+    expect(dist(9)).toBeGreaterThan(dist(19));
+  });
+
   it('a headwind makes the disc turn more than a tailwind', () => {
     const headwind = simulateThrow({ ...base, power: 0.9, hyzerDeg: -5 }, flatWorld(), { speed: 6, towardDeg: 180 });
     const tailwind = simulateThrow({ ...base, power: 0.9, hyzerDeg: -5 }, flatWorld(), { speed: 6, towardDeg: 0 });

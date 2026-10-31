@@ -1,5 +1,6 @@
-// Desktop keys: arrows / WASD aim and tilt, 1-n pick a disc, F switches backhand and forehand,
-// L looks down the hole, R restarts, and holding space charges a clean throw.
+// Desktop keys: arrows / WASD aim and tilt, shift + up / down (or E / Q) raise and lower the
+// launch, 1-n pick a disc, F switches backhand and forehand, L looks down the hole, R restarts,
+// and holding space charges a clean throw.
 
 import { DEFAULT_BAG } from '@shared/discs';
 import { MAX_POWER, type ShotSettings } from './settings';
@@ -41,7 +42,11 @@ export class Keyboard {
       if (!e.repeat && this.h.canCharge() && this.charge === null) this.charge = 0;
       return;
     }
-    if (e.key === 'ArrowLeft' || e.key === 'a') this.h.update({ aimOffsetDeg: s.aimOffsetDeg - 0.5 });
+    if (e.shiftKey && e.key === 'ArrowUp') this.h.update({ launchDeg: s.launchDeg + 0.5 });
+    else if (e.shiftKey && e.key === 'ArrowDown') this.h.update({ launchDeg: s.launchDeg - 0.5 });
+    else if (e.key === 'e') this.h.update({ launchDeg: s.launchDeg + 0.5 });
+    else if (e.key === 'q') this.h.update({ launchDeg: s.launchDeg - 0.5 });
+    else if (e.key === 'ArrowLeft' || e.key === 'a') this.h.update({ aimOffsetDeg: s.aimOffsetDeg - 0.5 });
     else if (e.key === 'ArrowRight' || e.key === 'd') this.h.update({ aimOffsetDeg: s.aimOffsetDeg + 0.5 });
     else if (e.key === 'ArrowUp' || e.key === 'w') this.h.update({ hyzerDeg: s.hyzerDeg - 1 });
     else if (e.key === 'ArrowDown' || e.key === 's') this.h.update({ hyzerDeg: s.hyzerDeg + 1 });

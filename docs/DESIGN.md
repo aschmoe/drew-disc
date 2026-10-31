@@ -134,6 +134,11 @@ line, adapted for one thumb.
 - **Aim:** drag left or right anywhere in the scene to turn the thrower. A faint **flight preview**
   shows the first part of the predicted line (about the first 40%), so aiming means something but
   the finish is still a read. "Pro mode" in settings turns the preview off.
+- **Launch height:** drag up or down in the same drag to throw higher or lower (3 to 19 degrees,
+  9 by default). Low lines stay under branches and come up short; high ones clear a canopy and
+  fade more. It is the finer adjustment, so it moves 0.6 times as much per pixel as the aim, and
+  a sideways drag barely changes it. The view tilts with it, and a chip on the left edge shows
+  a high or low launch (tap it to go back to normal). Putts keep their own launch.
 - **Disc:** tap the bag button (bottom left) for a radial picker of discs with flight numbers.
 - **Throw type:** backhand / forehand toggle (bottom right).
 - **Release angle:** a vertical slider on the right edge, hyzer at the bottom, flat in the middle,
@@ -161,7 +166,8 @@ keeps normal controls but suggests the putter.
 
 ### Desktop
 
-Same gestures with the mouse. Keyboard: A/D or arrows to aim, W/S for angle, 1 to 4 for discs,
+Same gestures with the mouse. Keyboard: A/D or arrows to aim, W/S for angle, E/Q or shift + up/down
+for launch height, 1 to 4 for discs,
 F for backhand/forehand, hold and release space as an alternative throw (power on hold, release
 timing for accuracy).
 
