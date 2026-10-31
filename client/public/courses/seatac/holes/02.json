@@ -1,0 +1,97 @@
+{
+  "id": "seatac-02",
+  "number": 2,
+  "name": "Hole 2",
+  "par": 3,
+  "lengthFt": 245,
+  "_notes": [
+    "MAP frame: meters, x = east, y = north. Tee at the origin, throwing north.",
+    "Traced from a UDisc satellite view (about 0.067 m/px, scaled off the 245 ft tee-to-A line) and Alex's tee photo. Estimates; see docs/DESIGN.md section 3.",
+    "The feature: the basket sits completely under the canopy, reached through a narrow entrance about 3 m wide. Tall skinny trees stand early on the left of the lane.",
+    "Surfaces: later entries win. Anything not covered is defaultSurface."
+  ],
+  "bounds": { "minX": -42, "maxX": 42, "minY": -16, "maxY": 120 },
+  "defaultSurface": "rough",
+  "terrain": {
+    "bumps": [
+      { "pos": [-14, 20], "radius": 14, "height": 0.5 },
+      { "pos": [12, 46], "radius": 16, "height": 0.6 },
+      { "pos": [-6, 84], "radius": 14, "height": 0.4 }
+    ]
+  },
+  "tees": [{ "id": "main", "pos": [0, 0], "headingDeg": 0 }],
+  "pins": [{ "id": "A", "pos": [-0.7, 74.7], "default": true }],
+  "surfaces": [
+    {
+      "kind": "fairway",
+      "_note": "the mown lane: narrow at the tee, a little wider in the middle, ends at the dark woods",
+      "polygon": [[-1.4, -2], [1.4, -2], [2.5, 6], [5.5, 14], [6.5, 26], [6, 38], [5, 47], [2.5, 52], [-2.5, 52], [-5, 46], [-6, 36], [-5.5, 22], [-3.5, 10], [-1.4, 4]]
+    },
+    {
+      "kind": "rough",
+      "_note": "shaded dirt and leaf litter under the trees before the entrance",
+      "polygon": [[-6, 46], [6, 46], [5, 58], [-5, 58]]
+    },
+    {
+      "kind": "bramble",
+      "_note": "blackberry right up against the left of the tee and the start of the lane",
+      "polygon": [[-30, -4], [-2, -4], [-3, 6], [-5.5, 14], [-7, 24], [-7.5, 40], [-30, 40]]
+    },
+    {
+      "kind": "bramble",
+      "_note": "big leafy bushes right of the lane near the tee",
+      "polygon": [[3.5, 2], [14, 2], [14, 24], [7.5, 24], [6.5, 12]]
+    },
+    { "kind": "path", "_note": "worn track from the tee toward hole 1's basket", "polyline": [[0, -2], [3, -3], [8, -6], [16, -9]], "width": 1.4 },
+    { "kind": "path", "polyline": [[0, 2], [0.5, 24], [0.5, 48], [0, 60], [-0.6, 72]], "width": 1.2 },
+    { "kind": "green", "circle": { "pos": [-0.7, 74.7], "radius": 4.5 } },
+    { "kind": "tee", "polygon": [[-0.9, -3.6], [0.9, -3.6], [0.9, 0.6], [-0.9, 0.6]] }
+  ],
+  "ob": [],
+  "trees": [
+    { "kind": "young", "pos": [-4.6, 17], "height": 15, "canopyRadius": 2.2, "_note": "early trees on the left: tall, thin, high-canopied, just off the lane" },
+    { "kind": "young", "pos": [-3.6, 23], "height": 17, "canopyRadius": 2.4 },
+    { "kind": "young", "pos": [-5.2, 28.5], "height": 16, "canopyRadius": 2.2 },
+    { "kind": "young", "pos": [-3.4, 34], "height": 15, "canopyRadius": 2.2 },
+    { "kind": "young", "pos": [-4.4, 39.5], "height": 8, "canopyRadius": 2.4, "_note": "the yellow-green little tree on the left" },
+    { "kind": "young", "pos": [6.6, 39.5], "height": 7, "canopyRadius": 2.3, "_note": "its twin on the right" },
+    { "kind": "leafy", "pos": [-7.5, 10.5], "height": 14, "canopyRadius": 4.2, "_note": "left of the tee" },
+    { "kind": "leafy", "pos": [8.2, 11], "height": 15, "canopyRadius": 4.6, "_note": "right of the tee, leaning over the lane" },
+    { "kind": "leafy", "pos": [-5.4, 59.5], "height": 17, "canopyRadius": 4.4, "_note": "left post of the entrance" },
+    { "kind": "leafy", "pos": [4.6, 56.5], "height": 16, "canopyRadius": 3.8, "_note": "right post of the entrance: the gap between the two is about 3 m at disc height" },
+    { "kind": "bush", "pos": [-3.2, 62.5], "height": 1.6, "canopyRadius": 1.5 },
+    { "kind": "bush", "pos": [3.1, 62], "height": 1.5, "canopyRadius": 1.4 },
+    { "kind": "leafy", "pos": [-5.6, 72.5], "height": 22, "canopyRadius": 6.5, "_note": "the canopy over the basket: tall trees whose crowns meet above it, from about 7 m up" },
+    { "kind": "leafy", "pos": [4.6, 77.5], "height": 22, "canopyRadius": 6.5 },
+    { "kind": "leafy", "pos": [0.8, 84.5], "height": 20, "canopyRadius": 5.5 },
+    { "kind": "leafy", "pos": [9.8, 66], "height": 18, "canopyRadius": 4.6 },
+    { "kind": "leafy", "pos": [-11, 66.5], "height": 18, "canopyRadius": 4.6 },
+    { "kind": "bush", "pos": [-5.5, 66.5], "height": 1.5, "canopyRadius": 1.6, "_note": "brush closing the sides of the basket room" },
+    { "kind": "bush", "pos": [4.8, 69], "height": 1.6, "canopyRadius": 1.6 },
+    { "kind": "bush", "pos": [-6.2, 79], "height": 1.4, "canopyRadius": 1.5 },
+    { "kind": "bush", "pos": [5.8, 82], "height": 1.5, "canopyRadius": 1.6 }
+  ],
+  "treeFields": [
+    { "kind": "leafy", "_note": "woods left of the lane", "spacing": 7.5, "seed": 211, "polygon": [[-42, -16], [-8, -16], [-9, 20], [-9.5, 50], [-8.5, 64], [-9, 88], [-42, 88]] },
+    { "kind": "leafy", "_note": "woods right of the lane", "spacing": 7.5, "seed": 212, "polygon": [[9, -2], [42, -16], [42, 88], [8.5, 88], [8, 72], [7.5, 50], [9, 26]] },
+    { "kind": "leafy", "_note": "behind the basket, deep enough to stop a long miss", "spacing": 6, "seed": 213, "polygon": [[-42, 88], [42, 88], [42, 120], [-42, 120]] },
+    { "kind": "young", "_note": "understory behind the basket", "spacing": 5, "seed": 221, "polygon": [[-20, 90], [20, 90], [20, 120], [-20, 120]] },
+    { "kind": "fir", "spacing": 13, "seed": 214, "polygon": [[-42, 30], [-16, 30], [-16, 120], [-42, 120]] },
+    { "kind": "fir", "spacing": 13, "seed": 215, "polygon": [[16, 20], [42, 20], [42, 120], [16, 120]] },
+    { "kind": "young", "spacing": 8, "seed": 216, "polygon": [[-30, -4], [-7.5, -4], [-8, 40], [-30, 40]] },
+    { "kind": "bush", "_note": "blackberry left", "spacing": 2.5, "seed": 217, "polygon": [[-30, -4], [-2, -4], [-3, 6], [-5.5, 14], [-7, 24], [-7.5, 40], [-30, 40]] },
+    { "kind": "bush", "_note": "bushes right near the tee", "spacing": 2.6, "seed": 218, "polygon": [[3.5, 2], [14, 2], [14, 24], [7.5, 24], [6.5, 12]] },
+    { "kind": "bush", "_note": "low brush along both sides of the lane", "spacing": 2.4, "seed": 219, "polygon": [[6.5, 24], [9, 24], [8, 50], [6, 50]] },
+    { "kind": "bush", "_note": "undergrowth round the basket room, so the entrance is the way in", "spacing": 2.7, "seed": 220, "polygon": [[-15, 54], [15, 54], [15, 112], [-15, 112]] }
+  ],
+  "clearings": [
+    {
+      "_note": "tee, lane and the dark open ground before the entrance, a little wider than the grass so canopies don't close it",
+      "polygon": [[-2.5, -5], [2.5, -5], [3, 4], [6, 13], [7.5, 26], [7, 40], [6.5, 50], [5, 60], [2, 64], [-2, 64], [-6, 60], [-7, 50], [-7, 36], [-6.5, 22], [-5, 12], [-2.5, 4]]
+    },
+    {
+      "_note": "the room round the basket, under the canopy",
+      "polygon": [[-6, 64], [6, 64], [7.5, 72], [7, 82], [3, 86], [-4, 86], [-7.5, 80], [-7.5, 70]]
+    }
+  ]
+}

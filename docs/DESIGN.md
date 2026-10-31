@@ -120,6 +120,25 @@ property edge is OB or just rough (assumed: brush is heavy rough, the property e
 OB), and a look at the green around the basket. More frames from later in the same video would
 settle all three.
 
+### Hole 2
+
+From UDisc: **Par 3, 245 ft (~75 m)**, tee to the A pin, straight north. Traced from a UDisc
+satellite view Alex marked up (about 0.067 m per pixel, scaled off the 245 ft tee-to-A line; the
+tee sits just west of hole 1's basket) and Alex's tee photo. Numbers are estimates.
+
+- **The feature: the basket is completely under the canopy**, in a little room in the woods
+  reached through a **narrow entrance** about 3 m wide at disc height (brush on both sides, big
+  trees as the posts) roughly 62 m out. The trees over the basket are tall, with crowns from
+  about 7 m up, so a low line gets in and a lofted throw catches leaves and drops short.
+- **Early trees on the left:** tall, thin, high-canopied trees just off the left edge of the
+  lane from about 15 to 35 m out.
+- **The lane:** mown grass, narrow at the tee and a little wider through the middle, with
+  blackberry right up against the left of the tee and big leafy bushes on the right. Past about
+  47 m it runs into shaded dirt under the trees before the entrance.
+- Woods all round, deep behind the basket so a long miss stays in the trees. No OB.
+- `test/hole2.test.ts` pins the length, the clear line through the entrance, the gap width, the
+  canopy over the basket, and that a low putter parks it while a lofted drive drops short.
+
 **Hole authoring tool.** A dev-only editor page lays the satellite screenshot on the ground plane
 so trees, OB lines and pins can be placed by clicking, then exports the hole JSON. The screenshot
 is used locally only and never committed or shipped (map imagery is copyrighted).
@@ -264,14 +283,14 @@ animation. Decide by the end of milestone 2.
   #1: Birdie (2). Beat it: <game link>"*. Phones get the share sheet with the picture; browsers
   without one copy the text. A replay of the best throw is still a nice-to-have.
 - **Rounds:** the start menu offers **18 holes**, **Front 9** (slots 1 to 9), **Back 9** (10 to
-  18) and **Single hole**. The course lists 18 hole slots; until more holes are built, every slot
-  is hole 1 (`course.json` `holes`). Each hole in a round gets its card (with "thru 4, +1") and
+  18) and **Single hole**. The course lists 18 hole slots (`course.json` `holes`): slot 2 is hole 2
+  and, until more holes are built, every other slot is hole 1. Each hole in a round gets its card (with "thru 4, +1") and
   posts to that slot's board; after the last hole the round card shows every hole and posts the
   total. A picked-up hole counts its strokes (par + 4) in the round. Progress is saved on the
   phone after each hole, so a closed tab offers "Continue" on the menu. No restarting a hole in a
   round (that would be a mulligan); a single hole can be replayed freely. Wind is rolled again
-  for each hole. When a slot gets a different hole file, the round reloads the page to build it
-  and carries on (`game/session.ts`); rebuilding the scene in place can come later.
+  for each hole. When the next slot plays a different hole file, its scenery is built and swapped
+  in place (`buildHoleScene` in `main.ts`); the tee sign shows the slot's number.
 - **Leaderboards:** one per hole slot and one per kind of round (front 9, back 9, 18): each name
   once at its best score, ties broken by earliest. Board ids end in a hash of the hole files they
   cover (`seatac-04-1k2x9a`, `seatac-front-lj8e4y`), so when real holes replace the copies of
@@ -355,8 +374,9 @@ drew-disc/
       ui/                 HUD, controls, results card, share card picture
       net/                scores.ts: leaderboard calls; (later) room transport for multiplayer
     public/courses/seatac/
-      course.json         name, 18 hole slots (all hole 01 for now), environment
+      course.json         name, 18 hole slots (slot 2 is hole 02, the rest hole 01 for now)
       holes/01.json       tees, pins, par, terrain bumps, surfaces, OB, trees, tree fields
+      holes/02.json       hole 2, same shape
     tools/
       flight-lab.html     dev only: flight tuning harness (npm run dev, /tools/flight-lab.html)
       (later) hole-editor dev only: trace a hole over a local satellite image, export JSON

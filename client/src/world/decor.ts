@@ -262,8 +262,8 @@ export function buildSkyDressing(env: EnvironmentDef, origin: MapPoint): Animate
   };
 }
 
-/** The tee sign: hole number, par, distance, and a birthday wish. */
-export function buildTeeSign(hole: Hole): THREE.Group {
+/** The tee sign: hole number (the slot in the round, when given), par, distance, and a birthday wish. */
+export function buildTeeSign(hole: Hole, number = hole.def.number): THREE.Group {
   const canvas = document.createElement('canvas');
   canvas.width = 512;
   canvas.height = 384;
@@ -276,7 +276,7 @@ export function buildTeeSign(hole: Hole): THREE.Group {
   c.fillStyle = '#ffffff';
   c.textAlign = 'center';
   c.font = '900 150px system-ui, sans-serif';
-  c.fillText(String(hole.def.number), 140, 190);
+  c.fillText(String(number), 140, 190);
   c.textAlign = 'left';
   c.font = '800 46px system-ui, sans-serif';
   c.fillText(`Par ${hole.def.par}`, 260, 120);

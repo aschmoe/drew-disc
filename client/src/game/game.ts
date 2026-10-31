@@ -84,7 +84,7 @@ export class Game {
     private course: CourseDef,
     scene: THREE.Scene,
     private camera: THREE.PerspectiveCamera,
-    sun: THREE.DirectionalLight,
+    private sun: THREE.DirectionalLight,
     uiRoot: HTMLElement,
     canvas: HTMLElement,
     private basket: THREE.Group,
@@ -139,6 +139,14 @@ export class Game {
 
   toast(text: string): void {
     this.overlay.showToast(text);
+  }
+
+  /** Switch to another hole's world (its scene is built by the caller). */
+  setHole(hole: Hole, basket: THREE.Group): void {
+    this.hole = hole;
+    this.basket = basket;
+    this.round = new Round(hole.def.par, hole.world.basket);
+    this.rig = new CameraRig(this.camera, this.sun, hole.world);
   }
 
   /** Play a hole from the tee, with fresh wind. */

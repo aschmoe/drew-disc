@@ -25,7 +25,10 @@ npm run build        # typecheck + build to dist/ (game) and dist-server/ (score
   would run), `camera.ts`, `playback.ts` (disc and trail along a flight), `keyboard.ts`,
   `shot.ts` (release point, auto putt power), `session.ts` (start menu, single hole or a front 9 /
   back 9 / 18 round), `rounds.ts` (round formats, board ids, saved progress) and `finish.ts`
-  (hole and round cards, posting, sharing). The course has 18 hole slots; for now all are hole 1.
+  (hole and round cards, posting, sharing). The course has 18 hole slots; slot 2 is hole 2 and
+  the rest are hole 1 for now. `main.ts` builds each hole's scenery as one group and swaps it when
+  the next slot plays a different hole file. A new hole: add `holes/NN.json` (MAP frame, tee at the
+  origin), put it in a slot in `course.json`, and add a test beside `test/hole2.test.ts`.
 - `server/` is the scoreboard: Node built-ins only (`node:http`, `node:sqlite`), bundled by
   esbuild to `dist-server/server.mjs`. `client/src/net/scores.ts` calls it; every call may fail
   (offline, or no backend), and the game must still work then.

@@ -2,9 +2,8 @@
 // a card after every hole and a round card at the end. Game plays one hole; this decides which
 // one comes next and what the cards say.
 //
-// Every slot is hole 1 for now, so the scene never changes between holes. When a round reaches a
-// slot with a different hole file, the page reloads and carries on from the saved round (boot
-// builds the scene for the round's next hole); rebuilding the scene in place can come later.
+// The course lists a hole file per slot (most slots repeat hole 1 for now). Before each hole the
+// session asks boot's `showHole` for that slot, which swaps the scenery when the file changes.
 
 import type { CourseDef } from '../content/hole';
 import { newScoreId } from '../net/scores';
@@ -26,17 +25,6 @@ import {
   type RoundState,
 } from './rounds';
 
-/** Set just before a reload that should carry straight on with the saved round. */
-const CONTINUE_KEY = 'drewdisc.continue';
-
-/** The hole file boot should build: the saved round's next hole when carrying on, else hole 1. */
-export function holeFileToLoad(course: CourseDef): string {
-  const carryOn = takeContinueFlag(false);
-  const r = carryOn ? loadRound(course) : null;
-  const slot = r ? nextSlot(course, r) : null;
-  return course.holes[slot ?? 0];
-}
-
 export class Session {
   private finish: HoleFinish;
   private menu: Menu;
@@ -47,8 +35,8 @@ export class Session {
   constructor(
     private game: Game,
     private course: CourseDef,
-    /** The hole file the scene was built from. */
-    private loadedFile: string,
+    /** Puts hole file `file` on screen as hole `number` (rebuilding the scenery if it changed). */
+    private showHole: (file: string, number: number) => Promise<void>,
     root: HTMLElement,
     toast: (text: string) => void,
     private practice: boolean,
@@ -59,8 +47,6 @@ export class Session {
   }
 
   start(): void {
-    const saved = loadRound(this.course);
-    if (saved && takeContinueFlag(true)) return this.playNext(saved);
     this.showMenu();
   }
 
@@ -70,41 +56,36 @@ export class Session {
     const pick = (format: RoundFormat): MenuChoice => ({
       label: FORMATS[format].label,
       detail: format === 'one' ? 'Hole 1, as many times as you like' : `${roundSlots(this.course, format).length} holes, one score`,
-      run: () => this.begin(format),
+      run: () => void this.begin(format),
     });
     const resume: MenuChoice | undefined = saved
       ? {
           label: `Continue ${FORMATS[saved.format].label}`,
           detail: `Hole ${nextSlot(this.course, saved)! + 1} next, ${relText(roundTotals(saved.scores).diff)} so far`,
-          run: () => this.playNext(saved),
+          run: () => void this.playNext(saved),
         }
       : undefined;
     this.menu.show(`${this.course.name} · ${this.course.location ?? ''}`.replace(/ · $/, ''), [pick('full'), pick('front'), pick('back'), pick('one')], resume);
   }
 
-  private begin(format: RoundFormat): void {
+  private async begin(format: RoundFormat): Promise<void> {
     if (format === 'one') {
       this.round = null;
       this.single = 0;
+      await this.showHole(this.course.holes[this.single], this.single + 1);
       this.game.startHole(`Hole ${this.single + 1}`, '', true);
       return;
     }
     const r: RoundState = { v: 1, course: this.course.id, format, id: newScoreId(), scores: [] };
     saveRound(r);
-    this.playNext(r);
+    return this.playNext(r);
   }
 
-  private playNext(r: RoundState): void {
+  private async playNext(r: RoundState): Promise<void> {
     this.round = r;
     const slot = nextSlot(this.course, r);
     if (slot === null) return this.showRoundCard(r);
-    if (this.course.holes[slot] !== this.loadedFile) {
-      // A different hole: rebuild by reloading, which carries on with the saved round.
-      saveRound(r);
-      setContinueFlag();
-      location.reload();
-      return;
-    }
+    await this.showHole(this.course.holes[slot], slot + 1);
     const t = roundTotals(r.scores);
     const tag = t.thru ? `${FORMATS[r.format].label} ${relText(t.diff)}` : FORMATS[r.format].label;
     // No restarts in a round: that would be a free mulligan.
@@ -122,7 +103,7 @@ export class Session {
     };
     if (!r) {
       void this.finish.showHole(sc, { ...holeInfo, holeNumber: this.single + 1 }, {
-        next: { label: 'Play again', run: () => this.begin('one') },
+        next: { label: 'Play again', run: () => void this.begin('one') },
         menu: () => this.showMenu(),
       });
       return;
@@ -136,7 +117,7 @@ export class Session {
       sc,
       { ...holeInfo, holeNumber: slot + 1, roundLine: `${FORMATS[r.format].label} · thru ${t.thru} · ${relText(t.diff)}` },
       {
-        next: more ? { label: 'Next hole', run: () => this.playNext(r) } : { label: 'See round', run: () => this.showRoundCard(r) },
+        next: more ? { label: 'Next hole', run: () => void this.playNext(r) } : { label: 'See round', run: () => this.showRoundCard(r) },
         menu: more ? () => this.showMenu() : undefined,
       },
     );
@@ -162,24 +143,5 @@ export class Session {
       { next: { label: 'New round', run: () => this.showMenu() } },
     );
     this.round = null;
-  }
-}
-
-function setContinueFlag(): void {
-  try {
-    sessionStorage.setItem(CONTINUE_KEY, '1');
-  } catch {
-    // Without sessionStorage the reload lands on the menu, where Continue still works.
-  }
-}
-
-/** Whether a reload asked to carry straight on; `clear` uses the flag up. */
-function takeContinueFlag(clear: boolean): boolean {
-  try {
-    const set = sessionStorage.getItem(CONTINUE_KEY) === '1';
-    if (clear) sessionStorage.removeItem(CONTINUE_KEY);
-    return set;
-  } catch {
-    return false;
   }
 }

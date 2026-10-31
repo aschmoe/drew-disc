@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { buildHole, loadCourse, loadHoleDef } from './content/hole';
+import { buildHole, loadCourse, loadHoleDef, type EnvironmentDef, type Hole } from './content/hole';
 import { Sound } from './audio/sound';
 import { Game } from './game/game';
-import { holeFileToLoad, Session } from './game/session';
+import { Session } from './game/session';
 import { createScene } from './world/scene';
 import { buildDecor, buildSkyDressing, buildTeeSign, buildWindFlag } from './world/decor';
 import { buildGround, buildOuterGround, buildPath } from './world/terrain';
@@ -23,39 +23,41 @@ async function boot() {
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 1200);
 
   const course = await loadCourse('seatac');
-  // Hole 1, or the next hole of a round that reloaded to change holes.
-  const holeFile = holeFileToLoad(course);
-  const def = await loadHoleDef('seatac', holeFile);
-  const hole = buildHole(def);
-
   const { scene, sun } = createScene(course.environment);
   // Phones: a smaller shadow map is plenty at that screen size and saves GPU time.
   if (Math.min(window.innerWidth, window.innerHeight) < 600) sun.shadow.mapSize.set(1024, 1024);
-  const trees = buildTrees(hole.trees);
-  const basket = placeBasket(hole);
-  const flag = buildWindFlag(hole);
-  const sky = buildSkyDressing(course.environment, def.tees[0].pos);
-  scene.add(
-    buildOuterGround(hole),
-    buildGround(hole),
-    buildPath(hole),
-    trees,
-    buildDecor(hole),
-    basket,
-    buildTee(hole),
-    buildTeeSign(hole),
-    buildOBStakes(hole),
-    flag.object,
-    sky.object,
-  );
+  const sunDir = sun.position.clone().sub(sun.target.position).normalize();
 
-  const b = hole.world.basket;
-  const jets = new JetFlyovers(new THREE.Vector3(b.x / 2, 0, b.z / 2), sun.position.clone().sub(sun.target.position).normalize());
-  scene.add(jets.object);
+  // Everything that belongs to one hole lives in one group, so moving to the next hole swaps it.
+  let file = course.holes[0];
+  let def = await loadHoleDef('seatac', file);
+  let hole = buildHole(def);
+  let parts = buildHoleScene(hole, course.environment, sunDir);
+  let sign = buildTeeSign(hole);
+  scene.add(parts.group, sign);
 
-  const game = new Game(hole, course, scene, camera, sun, ui, canvas, basket);
+  const game = new Game(hole, course, scene, camera, sun, ui, canvas, parts.basket);
   const debug = new URLSearchParams(location.search).has('debug');
-  const session = new Session(game, course, holeFile, ui, (t) => game.toast(t), debug);
+
+  /** Show hole `number` of a round, played on hole file `next`. Rebuilds the scene if the file changed. */
+  const showHole = async (next: string, number: number) => {
+    if (next !== file) {
+      const nextDef = await loadHoleDef('seatac', next);
+      file = next;
+      def = nextDef;
+      hole = buildHole(def);
+      scene.remove(parts.group);
+      disposeTree(parts.group);
+      parts = buildHoleScene(hole, course.environment, sunDir);
+      scene.add(parts.group);
+      game.setHole(hole, parts.basket);
+    }
+    scene.remove(sign);
+    disposeTree(sign);
+    sign = buildTeeSign(hole, number);
+    scene.add(sign);
+  };
+  const session = new Session(game, course, showHole, ui, (t) => game.toast(t), debug);
   // Debug builds expose the renderer so draw calls and triangles can be checked from the console.
   if (debug) (window as unknown as { renderer: THREE.WebGLRenderer }).renderer = renderer;
 
@@ -88,17 +90,55 @@ async function boot() {
     last = now;
     game.tick(dt);
     const t = now / 1000;
-    trees.userData.update?.(t);
-    flag.update(t, game.windNow);
-    sky.update(t, game.windNow);
-    jets.update(dt);
+    parts.trees.userData.update?.(t);
+    parts.flag.update(t, game.windNow);
+    parts.sky.update(t, game.windNow);
+    parts.jets.update(dt);
     sound.update(dt);
-    sound.setJetProximity(jets.proximity(camera.position));
+    sound.setJetProximity(parts.jets.proximity(camera.position));
     renderer.render(scene, camera);
   });
 
   document.getElementById('loading')?.remove();
   session.start();
+}
+
+/** The scenery of one hole: ground, trees, basket, tee, flag, sky dressing and the jets over it. */
+function buildHoleScene(hole: Hole, env: EnvironmentDef, sunDir: THREE.Vector3) {
+  const trees = buildTrees(hole.trees);
+  const basket = placeBasket(hole);
+  const flag = buildWindFlag(hole);
+  const sky = buildSkyDressing(env, hole.def.tees[0].pos);
+  const b = hole.world.basket;
+  const jets = new JetFlyovers(new THREE.Vector3(b.x / 2, 0, b.z / 2), sunDir);
+  const group = new THREE.Group();
+  group.add(
+    buildOuterGround(hole),
+    buildGround(hole),
+    buildPath(hole),
+    trees,
+    buildDecor(hole),
+    basket,
+    buildTee(hole),
+    buildOBStakes(hole),
+    flag.object,
+    sky.object,
+    jets.object,
+  );
+  return { group, trees, basket, flag, sky, jets };
+}
+
+/** Free the GPU memory of a group that is leaving the scene (nothing here shares geometry). */
+function disposeTree(root: THREE.Object3D): void {
+  root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    m.geometry?.dispose();
+    const mats = Array.isArray(m.material) ? m.material : m.material ? [m.material] : [];
+    for (const mat of mats) {
+      for (const v of Object.values(mat)) if (v instanceof THREE.Texture) v.dispose();
+      mat.dispose();
+    }
+  });
 }
 
 const SPEAKER_ON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
