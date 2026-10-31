@@ -1,22 +1,7 @@
 // Read-only overlay: the top bar, toasts, hints and the hole-complete card.
 
+import type { Scorecard } from '../game/round';
 import { el } from './dom';
-
-export interface ThrowRecord {
-  disc: string;
-  color: string;
-  /** Meters traveled, or null for a made putt from the lie. */
-  distance: number;
-  outcome: string;
-}
-
-export interface Scorecard {
-  title: string;
-  strokes: number;
-  par: number;
-  holeName: string;
-  throws: ThrowRecord[];
-}
 
 export class Overlay {
   private top = el('div', 'hud-top');

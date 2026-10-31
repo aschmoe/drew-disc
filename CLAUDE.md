@@ -18,8 +18,11 @@ npm run build        # typecheck + build to dist/
   Three.js, so tests and the flight lab (and later the server) run it headless. Keep it that way.
 - `client/src/content/` turns course and hole JSON (`client/public/courses/`) into a sim world and
   render data.
-- `client/src/world/` builds the Three.js scene; `client/src/game/` is the play loop;
-  `client/src/ui/` is the DOM overlay.
+- `client/src/world/` builds the Three.js scene; `client/src/ui/` is the DOM overlay.
+- `client/src/game/` is the play loop. `game.ts` wires it together; the parts beside it are
+  `round.ts` (lie, strokes, what each throw did: no Three.js, tested headless, the part a server
+  would run), `camera.ts`, `playback.ts` (disc and trail along a flight), `keyboard.ts` and
+  `shot.ts` (release point, auto putt power).
 - `shared/` holds code for both client and (future) server: the disc catalog in `shared/discs.ts`.
 - `client/tools/` holds dev-only pages, served by `npm run dev` and not built for production:
   `flight-lab.html` (flight tuning), `thrower.html` (every character pose; `?swing=forehand` for a
