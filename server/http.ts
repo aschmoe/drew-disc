@@ -5,8 +5,9 @@ import http from 'node:http';
 import { BOARD_RE, parseSubmission } from '../shared/scores';
 import type { ScoreStore } from './store';
 
-/** Posts allowed per IP per window. A round of golf posts once per hole. */
-const RATE = { posts: 30, windowMs: 10 * 60_000 };
+/** Posts allowed per IP per window. A round posts once per hole and once at the end, and friends
+ * on one wifi share an IP. */
+const RATE = { posts: 120, windowMs: 10 * 60_000 };
 const BODY_LIMIT = 1024;
 
 export class RateLimit {

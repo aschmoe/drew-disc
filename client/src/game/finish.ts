@@ -1,9 +1,9 @@
-// What happens when a hole ends: the results card, posting the score to the hole's leaderboard,
-// and sharing a picture of it. Network trouble never blocks the card; it just shows without a board.
+// The cards at the end of a hole and of a round: posting the score to its leaderboard and sharing a
+// picture of it. Network trouble never blocks a card; it just shows without a board.
 
 import { cleanName, type BoardResponse } from '@shared/scores';
 import { fetchBoard, newScoreId, postScore, savedName, saveName } from '../net/scores';
-import { ResultsCard } from '../ui/results';
+import { ResultsCard, type CardActions, type RoundSummary } from '../ui/results';
 import { cardBlob, drawShareCard, shareText, type ShareInfo } from '../ui/shareCard';
 import type { Scorecard } from './round';
 
@@ -16,13 +16,36 @@ export interface HoleInfo {
   holed: boolean;
   /** Played with ?debug (lie jumps, exact sliders): shown, never posted. */
   practice?: boolean;
+  /** During a round: how it stands, shown under the hole's score. */
+  roundLine?: string;
+}
+
+export interface RoundInfo extends RoundSummary {
+  /** The round's leaderboard (`seatac-front-1k2x9a`). */
+  board: string;
+  /** "Front 9". */
+  label: string;
+  course: string;
+  /** Posting id saved with the round, so a reload doesn't post it twice. */
+  id: string;
+  practice?: boolean;
+}
+
+/** What is being posted: one hole, or a whole round. */
+interface Target {
+  board: string;
+  id: string;
+  strokes: number;
+  holes: number;
+  postable: boolean;
+  /** Shown instead of posting when not postable. */
+  note: string;
+  share: Omit<ShareInfo, 'name' | 'rank' | 'players' | 'url'>;
 }
 
 export class HoleFinish {
   private card: ResultsCard;
-  private hole: HoleInfo | null = null;
-  private score: Scorecard | null = null;
-  private scoreId = '';
+  private target: Target | null = null;
   private postedAs: string | null = null;
   private board: BoardResponse | null = null;
   private shareFile: File | null = null;
@@ -32,41 +55,47 @@ export class HoleFinish {
   constructor(
     root: HTMLElement,
     private toast: (text: string) => void,
-    playAgain: () => void,
   ) {
     this.card = new ResultsCard(root, {
-      playAgain: () => {
-        this.seq++;
-        playAgain();
-      },
       post: (name) => void this.post(name),
       changeName: () => this.card.setBoard({ kind: 'ask', name: this.postedAs ?? '' }),
       share: () => void this.share(),
     });
   }
 
-  async show(score: Scorecard, hole: HoleInfo): Promise<void> {
-    const seq = ++this.seq;
-    this.hole = hole;
-    this.score = score;
-    this.scoreId = newScoreId();
-    this.postedAs = null;
-    this.board = null;
-    this.shareFile = null;
-    this.card.show(score, `${hole.course} ${score.holeName}`, `Leaderboard · ${score.holeName}`);
-    this.refreshShare();
+  showHole(score: Scorecard, hole: HoleInfo, actions: CardActions): Promise<void> {
+    this.card.showHole(score, `${hole.course} ${score.holeName}`, `Leaderboard · ${score.holeName}`, this.wrap(actions), hole.roundLine);
+    return this.begin({
+      board: hole.board,
+      id: newScoreId(),
+      strokes: score.strokes,
+      holes: 1,
+      postable: hole.holed && !hole.practice,
+      note: hole.practice ? 'Debug round, not posted.' : 'Hole out to get on the board.',
+      share: { ...score, course: hole.course, holeNumber: hole.holeNumber },
+    });
+  }
 
-    if (hole.holed && !hole.practice) {
-      const name = savedName();
-      if (name) return this.post(name);
-      this.card.setBoard({ kind: 'ask' });
-      return;
-    }
-    this.card.setBoard({ kind: 'loading' });
-    const board = await fetchBoard(hole.board);
-    if (seq !== this.seq) return;
-    const note = hole.practice ? 'Debug round, not posted.' : 'Hole out to get on the board.';
-    this.card.setBoard(board ? { kind: 'board', board, note } : { kind: 'offline' });
+  showRound(round: RoundInfo, actions: CardActions): Promise<void> {
+    this.card.showRound(round, `Leaderboard · ${round.label}`, this.wrap(actions));
+    return this.begin({
+      board: round.board,
+      id: round.id,
+      strokes: round.strokes,
+      holes: round.holes.length,
+      postable: !round.practice,
+      note: 'Debug round, not posted.',
+      share: {
+        course: round.course,
+        holeNumber: 0,
+        holeName: round.label,
+        par: round.par,
+        strokes: round.strokes,
+        title: `${round.strokes}`,
+        throws: [],
+        round: { label: round.label, holes: round.holes },
+      },
+    });
   }
 
   hide(): void {
@@ -74,10 +103,37 @@ export class HoleFinish {
     this.card.hide();
   }
 
+  /** Leaving a card drops any reply still on its way for it. */
+  private wrap(a: CardActions): CardActions {
+    const leave = <T extends unknown[]>(f: (...x: T) => void) => (...x: T) => {
+      this.seq++;
+      f(...x);
+    };
+    return { next: { label: a.next.label, run: leave(a.next.run) }, menu: a.menu && leave(a.menu) };
+  }
+
+  private async begin(t: Target): Promise<void> {
+    const seq = ++this.seq;
+    this.target = t;
+    this.postedAs = null;
+    this.board = null;
+    this.shareFile = null;
+    this.refreshShare();
+    if (t.postable) {
+      const name = savedName();
+      if (name) return this.post(name);
+      this.card.setBoard({ kind: 'ask' });
+      return;
+    }
+    this.card.setBoard({ kind: 'loading' });
+    const board = await fetchBoard(t.board);
+    if (seq !== this.seq) return;
+    this.card.setBoard(board ? { kind: 'board', board, note: t.note } : { kind: 'offline' });
+  }
+
   private async post(raw: string): Promise<void> {
-    const hole = this.hole;
-    const score = this.score;
-    if (!hole || !score) return;
+    const t = this.target;
+    if (!t) return;
     const name = cleanName(raw);
     if (!name) {
       this.card.setBoard({ kind: 'ask', name: raw, error: 'Use letters and numbers, up to 16.' });
@@ -86,7 +142,7 @@ export class HoleFinish {
     saveName(name);
     const seq = this.seq;
     this.card.setBoard({ kind: 'loading' });
-    const board = await postScore(hole.board, { id: this.scoreId, name, strokes: score.strokes });
+    const board = await postScore(t.board, { id: t.id, name, strokes: t.strokes, holes: t.holes });
     if (seq !== this.seq) return;
     if (!board) {
       this.card.setBoard({ kind: 'offline' });
@@ -99,18 +155,10 @@ export class HoleFinish {
   }
 
   private info(): ShareInfo {
-    const s = this.score!;
-    const you = this.board?.you;
     return {
-      course: this.hole!.course,
-      holeNumber: this.hole!.holeNumber,
-      holeName: s.holeName,
-      par: s.par,
-      strokes: s.strokes,
-      title: s.title,
-      throws: s.throws,
+      ...this.target!.share,
       name: this.postedAs ?? undefined,
-      rank: you?.rank,
+      rank: this.board?.you?.rank,
       players: this.board?.players,
       url: gameUrl(),
     };
@@ -129,7 +177,7 @@ export class HoleFinish {
   }
 
   private async share(): Promise<void> {
-    if (!this.score) return;
+    if (!this.target) return;
     const text = shareText(this.info());
     const url = gameUrl();
     const file = this.shareFile;

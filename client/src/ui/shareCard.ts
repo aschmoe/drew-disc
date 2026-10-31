@@ -1,5 +1,6 @@
-// The share card: a portrait picture of the hole's score (sky, firs, a jet, the basket) with the
-// throws listed, for sending to friends. Drawn on a 2D canvas, so it costs no asset files.
+// The share card: a portrait picture of a hole's score (with its throws) or a round's (with every
+// hole), over sky, firs, a jet and the basket, for sending to friends. Drawn on a 2D canvas, so it
+// costs no asset files.
 
 import { createRng, hashSeed } from '../sim/rng';
 import type { ThrowRecord } from '../game/round';
@@ -13,6 +14,8 @@ export interface ShareInfo {
   /** "Birdie!", "Picked up"... */
   title: string;
   throws: ThrowRecord[];
+  /** Set for a finished round: the round's name and every hole. Replaces the throws. */
+  round?: { label: string; holes: { number: number; strokes: number; par: number; holed: boolean }[] };
   name?: string;
   rank?: number;
   players?: number;
@@ -29,6 +32,7 @@ const MAX_THROWS = 5;
 
 /** The words that go with the picture (and stand alone where a picture can't be shared). */
 export function shareText(i: ShareInfo): string {
+  if (i.round) return `Drew Disc, ${i.course} ${i.round.label}: ${i.strokes} (${relWord(i.strokes - i.par, 'E')}). Beat it:`;
   const label = i.title.replace(/!+$/, '');
   const score = i.title === 'Picked up' ? `Picked up (${i.strokes})` : `${label[0].toUpperCase()}${label.slice(1).toLowerCase()} (${i.strokes})`;
   return `Drew Disc, ${i.course} #${i.holeNumber}: ${score}. Beat it:`;
@@ -51,7 +55,7 @@ export function drawShareCard(i: ShareInfo): HTMLCanvasElement {
   spaced(g, 'DREW DISC', W / 2, 118, 10);
   g.font = `800 36px ${FONT}`;
   g.globalAlpha = 0.92;
-  g.fillText(`${i.course} · ${i.holeName} · Par ${i.par}`, W / 2, 176);
+  g.fillText(`${i.course} · ${i.round ? i.round.label : i.holeName} · Par ${i.par}`, W / 2, 176);
   g.globalAlpha = 1;
 
   // The score panel.
@@ -60,7 +64,9 @@ export function drawShareCard(i: ShareInfo): HTMLCanvasElement {
   const rowH = 62;
   const panelTop = 226;
   const listTop = panelTop + 330;
-  const listH = shown.length * rowH + (more > 0 ? 44 : 0);
+  const cells = i.round?.holes ?? [];
+  const gridRows = Math.ceil(cells.length / 9);
+  const listH = i.round ? gridRows * 110 : shown.length * rowH + (more > 0 ? 44 : 0);
   const panelH = listTop - panelTop + listH + (i.name ? 96 : 40);
   g.save();
   g.shadowColor = 'rgba(0,0,0,0.22)';
@@ -71,16 +77,38 @@ export function drawShareCard(i: ShareInfo): HTMLCanvasElement {
   g.fill();
   g.restore();
 
+  const title = i.round ? `${i.strokes}` : i.title;
   g.fillStyle = ACCENT;
-  g.font = `900 ${fitFont(g, i.title, 150, W - 260)}px ${FONT}`;
-  g.fillText(i.title, W / 2, panelTop + 180);
+  g.font = `900 ${fitFont(g, title, 150, W - 260)}px ${FONT}`;
+  g.fillText(title, W / 2, panelTop + 180);
   const d = i.strokes - i.par;
   g.fillStyle = INK;
   g.font = `800 46px ${FONT}`;
-  g.fillText(`${i.strokes} ${i.strokes === 1 ? 'throw' : 'throws'} · ${d === 0 ? 'even' : d > 0 ? `+${d}` : `${d}`}`, W / 2, panelTop + 262);
+  g.fillText(
+    i.round ? `${relWord(d, 'even')} · ${cells.length} holes` : `${i.strokes} ${i.strokes === 1 ? 'throw' : 'throws'} · ${relWord(d, 'even')}`,
+    W / 2,
+    panelTop + 262,
+  );
 
-  // One line per throw: colored dot, disc, distance, what happened.
-  shown.forEach((t, k) => {
+  // A round: one cell per hole, nine to a row, tinted by how the hole went.
+  cells.forEach((h, k) => {
+    const x = 140 + (k % 9) * 90;
+    const y = listTop + Math.floor(k / 9) * 110;
+    const hd = h.strokes - h.par;
+    g.fillStyle = hd < 0 ? ACCENT : hd > 0 ? '#dfe6ee' : '#f1f5f0';
+    roundRect(g, x, y, 80, 96, 20);
+    g.fill();
+    g.fillStyle = hd < 0 ? '#fff' : INK;
+    g.globalAlpha = 0.6;
+    g.font = `800 22px ${FONT}`;
+    g.fillText(`${h.number}`, x + 40, y + 30);
+    g.globalAlpha = 1;
+    g.font = `900 40px ${FONT}`;
+    g.fillText(`${h.strokes}${h.holed ? '' : '*'}`, x + 40, y + 76);
+  });
+
+  // A hole: one line per throw: colored dot, disc, distance, what happened.
+  if (!i.round) shown.forEach((t, k) => {
     const y = listTop + k * rowH;
     g.fillStyle = '#f1f5f0';
     roundRect(g, 140, y, W - 280, rowH - 12, 25);
@@ -102,7 +130,7 @@ export function drawShareCard(i: ShareInfo): HTMLCanvasElement {
     g.fillText(`${Math.round(t.distance * 3.28084)} ft`, W - 330, y + 37);
   });
   g.textAlign = 'center';
-  if (more > 0) {
+  if (more > 0 && !i.round) {
     g.fillStyle = INK;
     g.globalAlpha = 0.55;
     g.font = `800 28px ${FONT}`;
@@ -127,6 +155,8 @@ export function drawShareCard(i: ShareInfo): HTMLCanvasElement {
   g.shadowBlur = 0;
   return c;
 }
+
+const relWord = (d: number, zero: string) => (d === 0 ? zero : d > 0 ? `+${d}` : `${d}`);
 
 export const cardBlob = (c: HTMLCanvasElement): Promise<Blob | null> => new Promise((r) => c.toBlob(r, 'image/png'));
 

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { buildHole, loadCourse, loadHoleDef } from './content/hole';
 import { Sound } from './audio/sound';
 import { Game } from './game/game';
+import { holeFileToLoad, Session } from './game/session';
 import { createScene } from './world/scene';
 import { buildDecor, buildSkyDressing, buildTeeSign, buildWindFlag } from './world/decor';
 import { buildGround, buildOuterGround, buildPath } from './world/terrain';
@@ -22,7 +23,9 @@ async function boot() {
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 1200);
 
   const course = await loadCourse('seatac');
-  const def = await loadHoleDef('seatac', course.holes[0]);
+  // Hole 1, or the next hole of a round that reloaded to change holes.
+  const holeFile = holeFileToLoad(course);
+  const def = await loadHoleDef('seatac', holeFile);
   const hole = buildHole(def);
 
   const { scene, sun } = createScene(course.environment);
@@ -51,8 +54,10 @@ async function boot() {
   scene.add(jets.object);
 
   const game = new Game(hole, course, scene, camera, sun, ui, canvas, basket);
+  const debug = new URLSearchParams(location.search).has('debug');
+  const session = new Session(game, course, holeFile, ui, (t) => game.toast(t), debug);
   // Debug builds expose the renderer so draw calls and triangles can be checked from the console.
-  if (new URLSearchParams(location.search).has('debug')) (window as unknown as { renderer: THREE.WebGLRenderer }).renderer = renderer;
+  if (debug) (window as unknown as { renderer: THREE.WebGLRenderer }).renderer = renderer;
 
   // Sound starts on the first tap or key (browsers require a gesture).
   const sound = new Sound();
@@ -93,6 +98,7 @@ async function boot() {
   });
 
   document.getElementById('loading')?.remove();
+  session.start();
 }
 
 const SPEAKER_ON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';

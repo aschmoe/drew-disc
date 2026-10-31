@@ -1,5 +1,5 @@
-// The hole-complete card: the score, each throw, the hole's leaderboard and the buttons to share
-// or go again. It only draws; game/finish.ts does the posting and sharing.
+// The end-of-hole and end-of-round cards: the score, each throw (or each hole), the leaderboard
+// and the buttons to share or go on. It only draws; game/finish.ts does the posting and sharing.
 
 import type { BoardResponse } from '@shared/scores';
 import { NAME_MAX } from '@shared/scores';
@@ -12,14 +12,29 @@ export type BoardState =
   | { kind: 'loading' }
   /** No scoreboard reachable (offline, or a build without a backend). */
   | { kind: 'offline' }
-  /** `postedAs` set when this hole is on the board under that name; `note` replaces the footer. */
+  /** `postedAs` set when this score is on the board under that name; `note` replaces the footer. */
   | { kind: 'board'; board: BoardResponse; postedAs?: string; note?: string };
 
 export interface ResultsHandlers {
-  playAgain: () => void;
   post: (name: string) => void;
   changeName: () => void;
   share: () => void;
+}
+
+/** What the card's buttons do. */
+export interface CardActions {
+  /** The big button: "Next hole", "Play again"... */
+  next: { label: string; run: () => void };
+  /** A small "Menu" link under the buttons, when set. */
+  menu?: () => void;
+}
+
+export interface RoundSummary {
+  /** "SeaTac · Front 9". */
+  eyebrow: string;
+  strokes: number;
+  par: number;
+  holes: { number: number; strokes: number; par: number; holed: boolean }[];
 }
 
 /** "E", "+2", "-1": a score against par. */
@@ -40,16 +55,19 @@ export class ResultsCard {
     this.shareBtn.onclick = () => this.h.share();
   }
 
-  /** `eyebrow` is the line above the score ("SeaTac Hole 1"). */
-  show(s: Scorecard, eyebrow: string, boardTitle: string): void {
+  /**
+   * After a hole. `eyebrow` is the line above the score ("SeaTac Hole 4"); `roundLine`, during a
+   * round, says how the round stands ("Front 9 · thru 4 · +1").
+   */
+  showHole(s: Scorecard, eyebrow: string, boardTitle: string, actions: CardActions, roundLine?: string): void {
     this.par = s.par;
-    this.wrap.innerHTML = '';
-    const card = el('div', 'card');
+    const card = this.begin();
     card.append(
       el('div', 'card-eyebrow', `${eyebrow} · Par ${s.par}`),
       el('div', 'card-title', s.title),
       el('div', 'card-sub', `${s.strokes} ${s.strokes === 1 ? 'throw' : 'throws'} (${relToPar(s.strokes, s.par)})`),
     );
+    if (roundLine) card.append(el('div', 'card-round', roundLine));
     const list = el('ol', 'card-throws');
     for (const t of s.throws) {
       const li = el('li');
@@ -58,17 +76,60 @@ export class ResultsCard {
       li.append(dot, el('span', 'tdisc', t.disc), el('span', 'tdist', `${Math.round(t.distance * 3.28084)} ft`), el('span', 'tout', t.outcome));
       list.append(li);
     }
-    const boardHead = el('div', 'board-head', boardTitle);
-    const again = el('button', 'cta', 'Play again');
-    again.onclick = () => {
-      this.hide();
-      this.h.playAgain();
-    };
-    const buttons = el('div', 'card-buttons');
-    buttons.append(this.shareBtn, again);
-    card.append(list, boardHead, this.boardEl, buttons);
+    card.append(list);
+    this.finishCard(card, boardTitle, actions);
+  }
+
+  /** After the last hole of a round: the total and every hole. */
+  showRound(r: RoundSummary, boardTitle: string, actions: CardActions): void {
+    this.par = r.par;
+    const card = this.begin();
+    card.append(
+      el('div', 'card-eyebrow', `${r.eyebrow} · Par ${r.par}`),
+      el('div', 'card-title', `${r.strokes}`),
+      el('div', 'card-sub', `${relToPar(r.strokes, r.par)} · ${r.holes.length} holes`),
+    );
+    const grid = el('div', 'round-grid');
+    for (const h of r.holes) {
+      const d = h.strokes - h.par;
+      const cell = el('div', `round-cell ${d < 0 ? 'under' : d > 0 ? 'over' : 'even'}`);
+      cell.title = h.holed ? '' : 'Picked up';
+      cell.append(el('span', 'rnum', `${h.number}`), el('span', 'rstrokes', `${h.strokes}${h.holed ? '' : '*'}`));
+      grid.append(cell);
+    }
+    card.append(grid);
+    if (r.holes.some((h) => !h.holed)) card.append(el('div', 'board-msg', '* picked up at the stroke limit'));
+    this.finishCard(card, boardTitle, actions);
+  }
+
+  private begin(): HTMLDivElement {
+    this.wrap.innerHTML = '';
+    this.setShareLabel('Share');
+    const card = el('div', 'card');
     this.wrap.append(card);
     this.wrap.hidden = false;
+    return card;
+  }
+
+  private finishCard(card: HTMLDivElement, boardTitle: string, actions: CardActions): void {
+    const go = el('button', 'cta', actions.next.label);
+    go.onclick = () => {
+      this.hide();
+      actions.next.run();
+    };
+    const buttons = el('div', 'card-buttons');
+    buttons.append(this.shareBtn, go);
+    card.append(el('div', 'board-head', boardTitle), this.boardEl, buttons);
+    if (actions.menu) {
+      const menu = el('button', 'link card-menu', 'Menu');
+      menu.type = 'button';
+      menu.onclick = () => {
+        this.hide();
+        actions.menu!();
+      };
+      card.append(menu);
+    }
+    card.scrollTop = 0;
   }
 
   hide(): void {

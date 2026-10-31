@@ -4,8 +4,8 @@
 //   POST /api/boards/<board>  ScoreSubmission      -> BoardResponse (with `you`)
 //   GET  /api/health                               -> { ok: true }
 //
-// A board is one hole (later also a full round). Each name appears once, with its best score;
-// ties go to whoever got there first.
+// A board is one hole, or one kind of round (front 9, back 9, 18). Each name appears once, with
+// its best score; ties go to whoever got there first.
 
 /** Board ids: lowercase words and dashes, e.g. `seatac-01`. */
 export const BOARD_RE = /^[a-z0-9-]{1,32}$/;
@@ -14,13 +14,18 @@ export const SCORE_ID_RE = /^[A-Za-z0-9_-]{8,40}$/;
 export const NAME_MAX = 16;
 /** Above this a "score" is not a real hole. Matches nothing the game can produce. */
 export const MAX_STROKES = 30;
+/** The longest round a score can cover. */
+export const MAX_HOLES = 18;
 /** How many entries a board returns. */
 export const BOARD_SIZE = 10;
 
 export interface ScoreSubmission {
   id: string;
   name: string;
+  /** Total strokes over `holes` holes. */
   strokes: number;
+  /** Holes the score covers: 1 for a hole board, 9 or 18 for a round. Defaults to 1. */
+  holes?: number;
 }
 
 export interface BoardEntry {
@@ -58,7 +63,9 @@ export function parseSubmission(body: unknown): ScoreSubmission | { error: strin
   if (typeof b.id !== 'string' || !SCORE_ID_RE.test(b.id)) return { error: 'bad id' };
   const name = cleanName(b.name);
   if (!name) return { error: 'bad name' };
+  const holes = b.holes ?? 1;
+  if (typeof holes !== 'number' || !Number.isInteger(holes) || holes < 1 || holes > MAX_HOLES) return { error: 'bad holes' };
   const strokes = b.strokes;
-  if (typeof strokes !== 'number' || !Number.isInteger(strokes) || strokes < 1 || strokes > MAX_STROKES) return { error: 'bad strokes' };
-  return { id: b.id, name, strokes };
+  if (typeof strokes !== 'number' || !Number.isInteger(strokes) || strokes < holes || strokes > MAX_STROKES * holes) return { error: 'bad strokes' };
+  return { id: b.id, name, strokes, holes };
 }

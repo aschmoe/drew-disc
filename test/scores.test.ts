@@ -21,7 +21,10 @@ describe('names', () => {
 
 describe('submissions', () => {
   it('accepts a real hole and refuses nonsense', () => {
-    expect(parseSubmission({ id: 'abcdefgh12', name: 'Drew', strokes: 3 })).toEqual({ id: 'abcdefgh12', name: 'Drew', strokes: 3 });
+    expect(parseSubmission({ id: 'abcdefgh12', name: 'Drew', strokes: 3 })).toEqual({ id: 'abcdefgh12', name: 'Drew', strokes: 3, holes: 1 });
+    expect(parseSubmission({ id: 'abcdefgh12', name: 'Drew', strokes: 58, holes: 18 })).toMatchObject({ strokes: 58, holes: 18 });
+    expect(parseSubmission({ id: 'abcdefgh12', name: 'Drew', strokes: 8, holes: 9 })).toEqual({ error: 'bad strokes' });
+    expect(parseSubmission({ id: 'abcdefgh12', name: 'Drew', strokes: 58, holes: 19 })).toEqual({ error: 'bad holes' });
     expect(parseSubmission({ id: 'short', name: 'Drew', strokes: 3 })).toEqual({ error: 'bad id' });
     expect(parseSubmission({ id: 'abcdefgh12', name: 'Drew', strokes: 0 })).toEqual({ error: 'bad strokes' });
     expect(parseSubmission({ id: 'abcdefgh12', name: 'Drew', strokes: 2.5 })).toEqual({ error: 'bad strokes' });

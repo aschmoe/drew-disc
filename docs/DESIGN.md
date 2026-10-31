@@ -263,17 +263,28 @@ animation. Decide by the end of milestone 2.
   **Share**: a picture of the score card (sky, firs, a jet, the throws) plus *"Drew Disc, SeaTac
   #1: Birdie (2). Beat it: <game link>"*. Phones get the share sheet with the picture; browsers
   without one copy the text. A replay of the best throw is still a nice-to-have.
-- **Leaderboards:** per hole (each name once at its best score, ties broken by earliest) and later
-  per course (total strokes over a full round, once there's more than one hole). Name only, no
-  accounts: the first finished hole asks for a name, the phone remembers it, later holes post on
+- **Rounds:** the start menu offers **18 holes**, **Front 9** (slots 1 to 9), **Back 9** (10 to
+  18) and **Single hole**. The course lists 18 hole slots; until more holes are built, every slot
+  is hole 1 (`course.json` `holes`). Each hole in a round gets its card (with "thru 4, +1") and
+  posts to that slot's board; after the last hole the round card shows every hole and posts the
+  total. A picked-up hole counts its strokes (par + 4) in the round. Progress is saved on the
+  phone after each hole, so a closed tab offers "Continue" on the menu. No restarting a hole in a
+  round (that would be a mulligan); a single hole can be replayed freely. Wind is rolled again
+  for each hole. When a slot gets a different hole file, the round reloads the page to build it
+  and carries on (`game/session.ts`); rebuilding the scene in place can come later.
+- **Leaderboards:** one per hole slot and one per kind of round (front 9, back 9, 18): each name
+  once at its best score, ties broken by earliest. Board ids end in a hash of the hole files they
+  cover (`seatac-04-1k2x9a`, `seatac-front-lj8e4y`), so when real holes replace the copies of
+  hole 1 those boards start fresh instead of mixing layouts. Name only, no accounts: the first finished hole asks for a name, the phone remembers it, later holes post on
   their own. "Change name" moves that hole's score to the corrected name.
 - **Open to anyone with the link** (decided): no codes or logins, since the link only goes to
   friends.
 - Only holed-out rounds post. A picked-up hole and anything played with `?debug` show the board
   without posting.
 - Stored in SQLite on the backend (see below). Submissions are lightly sanity checked (1 to 30
-  strokes, a 16 character name of letters, digits and a little punctuation) and posts are rate
-  limited per IP; it's for friends. The API is `GET`/`POST /api/boards/<hole id>`
+  strokes per hole, up to 18 holes, a 16 character name of letters, digits and a little
+  punctuation) and posts are rate limited per IP; it's for friends. The API is
+  `GET`/`POST /api/boards/<board id>`
   (`shared/scores.ts`). Each finished hole carries a random id, so a retried post counts once.
 - With no backend (the preview build, or offline) the card says the leaderboard can't be reached
   and sharing still works.
@@ -338,11 +349,13 @@ drew-disc/
         playback.ts         plays a flight back: disc, spin, trail, events
         keyboard.ts         desktop keys
         shot.ts             release point and auto putt power (pure TS)
-        finish.ts           end of a hole: results card, posting the score, sharing
+        session.ts          start menu, single hole or round, what comes next
+        rounds.ts           round formats, slots, board ids, saved progress (pure TS)
+        finish.ts           hole and round cards: posting the score, sharing
       ui/                 HUD, controls, results card, share card picture
       net/                scores.ts: leaderboard calls; (later) room transport for multiplayer
     public/courses/seatac/
-      course.json         name, hole list, environment (sky, fog, sun, wind range)
+      course.json         name, 18 hole slots (all hole 01 for now), environment
       holes/01.json       tees, pins, par, terrain bumps, surfaces, OB, trees, tree fields
     tools/
       flight-lab.html     dev only: flight tuning harness (npm run dev, /tools/flight-lab.html)

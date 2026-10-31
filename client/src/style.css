@@ -135,6 +135,26 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #cfdcd8; col
 .card-buttons .cta { margin-top: 0; }
 .share-btn { padding: 14px; border: 0; border-radius: 999px; background: #eef2ee; color: var(--ink); font: inherit; font-size: 16px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 0 #cdd6cd; }
 
+/* During a round, under the hole's score; and the round card's hole grid. */
+.card-round { justify-self: center; margin-top: 2px; padding: 4px 12px; border-radius: 999px; background: #eef2ee; font-size: 13px; font-weight: 800; }
+.round-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; margin: 10px 0 4px; }
+.round-cell { display: grid; padding: 4px 0 5px; border-radius: 9px; background: #f1f5f0; line-height: 1.1; }
+.round-cell.under { background: var(--accent); color: #fff; }
+.round-cell.over { background: #dfe6ee; }
+.round-cell .rnum { font-size: 10px; font-weight: 800; opacity: 0.6; }
+.round-cell .rstrokes { font-size: 17px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.card-menu { justify-self: center; margin-top: 4px; font-size: 13px; font-weight: 700; }
+
+/* Start menu. */
+.menu { gap: 10px; }
+.menu-title { font-size: 40px; font-weight: 900; line-height: 1; color: var(--accent); }
+.menu-choices { display: grid; gap: 8px; margin-top: 6px; }
+.menu-choice { display: grid; gap: 2px; padding: 12px 16px; border: 0; border-radius: 18px; background: #f1f5f0; color: var(--ink); font: inherit; text-align: left; cursor: pointer; box-shadow: 0 3px 0 #d6ded5; }
+.menu-choice .mlabel { font-size: 17px; font-weight: 900; }
+.menu-choice .mdetail { font-size: 12px; font-weight: 700; opacity: 0.6; }
+.menu-choice.resume { background: var(--accent); color: #fff; box-shadow: 0 4px 0 #c2276a; }
+.menu-choice.resume .mdetail { opacity: 0.85; }
+
 /* The hole's leaderboard, inside the card. */
 .board-head { margin-top: 6px; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; }
 .board { display: grid; gap: 6px; min-height: 40px; }

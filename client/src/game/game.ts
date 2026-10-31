@@ -17,10 +17,9 @@ import { Character, RELEASE_AT, releasePoint, type ThrowAnim } from '../world/ch
 import { Effects } from '../world/effects';
 import { buildDiscMesh, teePadLift } from '../world/props';
 import { CameraRig } from './camera';
-import { HoleFinish } from './finish';
 import { Keyboard } from './keyboard';
 import { FlightPlayback, makeLine, setLine, THROW_ANIM_SECONDS } from './playback';
-import { Round } from './round';
+import { Round, type Scorecard } from './round';
 import { formatFeet } from './score';
 import { AIM_LIMIT, HYZER_LIMIT, LAUNCH_DEFAULT, LAUNCH_MAX, LAUNCH_MIN, MAX_POWER, type ShotSettings } from './settings';
 import { autoPuttPower, releaseFrom } from './shot';
@@ -54,7 +53,6 @@ export class Game {
   private hasThrown = false;
 
   private overlay: Overlay;
-  private finish: HoleFinish;
   private controls: Controls;
   private keyboard: Keyboard;
   private debug: DebugPanel | null = null;
@@ -72,6 +70,14 @@ export class Game {
   onFlightEvent: ((e: FlightEvent, speed: number) => void) | null = null;
   /** Called on a birdie or better, as the disc hits the chains. */
   onCelebrate: ((ace: boolean) => void) | null = null;
+  /** Called when the hole is over (in the basket, or picked up). Session shows the card. */
+  onHoleDone: ((card: Scorecard, holed: boolean) => void) | null = null;
+  /** Shown in the header: "Hole 4", and how the round stands ("Front 9 +1"). */
+  private holeLabel = 'Hole 1';
+  private roundTag = '';
+  /** R (and the debug Restart) may start the hole over: not in a round, where it'd be a mulligan. */
+  private allowRestart = false;
+  private windRng = createRng((Date.now() & 0xffff) ^ 0x5eed);
 
   constructor(
     private hole: Hole,
@@ -83,14 +89,11 @@ export class Game {
     canvas: HTMLElement,
     private basket: THREE.Group,
   ) {
-    const rng = createRng((Date.now() & 0xffff) ^ 0x5eed);
-    const w = course.environment.wind;
-    this.wind = { speed: Number(rng.range(w.minSpeed, w.maxSpeed).toFixed(1)), towardDeg: Math.round(rng.range(0, 360)) };
+    this.wind = this.rollWind();
     this.round = new Round(hole.def.par, hole.world.basket);
     this.rig = new CameraRig(camera, sun, hole.world);
 
     this.overlay = new Overlay(uiRoot);
-    this.finish = new HoleFinish(uiRoot, (t) => this.overlay.showToast(t), () => this.restart());
     this.controls = new Controls(uiRoot, DEFAULT_BAG, {
       settings: () => this.settings,
       update: (p) => this.update(p),
@@ -116,7 +119,7 @@ export class Game {
         if (power > 0.05) this.throwDisc({ power, flickDeg: 0, spin: 0.95 });
       },
       look: () => this.look(),
-      restart: () => this.restart(),
+      restart: () => this.allowRestart && this.restart(),
     });
     if (new URLSearchParams(location.search).has('debug')) {
       this.debug = new DebugPanel(uiRoot, {
@@ -131,6 +134,32 @@ export class Game {
     this.playback = new FlightPlayback(getDisc(this.settings.discId));
     scene.add(this.thrower, this.playback.disc, this.preview, this.playback.trail, this.markers, this.effects.object);
     this.restart();
+    this.idle();
+  }
+
+  toast(text: string): void {
+    this.overlay.showToast(text);
+  }
+
+  /** Play a hole from the tee, with fresh wind. */
+  startHole(label: string, roundTag: string, allowRestart: boolean): void {
+    this.holeLabel = label;
+    this.roundTag = roundTag;
+    this.allowRestart = allowRestart;
+    this.wind = this.rollWind();
+    this.restart();
+  }
+
+  /** Behind a menu or card: the scene stays, nothing can be thrown. */
+  idle(): void {
+    this.phase = 'holed';
+    this.controls.setEnabled(false);
+    this.overlay.setHint(null);
+  }
+
+  private rollWind(): Wind {
+    const w = this.course.environment.wind;
+    return { speed: Number(this.windRng.range(w.minSpeed, w.maxSpeed).toFixed(1)), towardDeg: Math.round(this.windRng.range(0, 360)) };
   }
 
   private restart(): void {
@@ -141,7 +170,6 @@ export class Game {
     this.result = null;
     this.markers.clear();
     this.playback.hideTrail();
-    this.finish.hide();
     this.settings = { ...this.settings, aimOffsetDeg: 0, hyzerDeg: 0, launchDeg: LAUNCH_DEFAULT, power: 0.9, discId: DEFAULT_BAG[1] };
     this.controls.setEnabled(true);
     this.enterAim();
@@ -159,7 +187,6 @@ export class Game {
     const x = teeW.x + (b.x - teeW.x) * f;
     const z = teeW.z + (b.z - teeW.z) * f;
     this.round.lie = v3(x, this.hole.world.groundHeight(x, z), z);
-    this.finish.hide();
     this.enterAim();
     this.snapCamera();
   }
@@ -236,7 +263,8 @@ export class Game {
 
   private refreshHeader(): void {
     this.overlay.setHeader(
-      `<b>${this.hole.def.name}</b> · Par ${this.hole.def.par}` +
+      `<b>${this.holeLabel}</b> · Par ${this.hole.def.par}` +
+        (this.roundTag ? `<span class="sep"></span>${this.roundTag}` : '') +
         `<span class="sep"></span>Throw <b>${this.round.strokes + 1}</b>` +
         `<span class="sep"></span><b>${formatFeet(this.round.basketDistance())}</b>` +
         `<span class="sep"></span>Wind ${this.wind.speed} m/s ${windArrow(this.wind.towardDeg - this.aimHeading())}`,
@@ -351,21 +379,11 @@ export class Game {
       this.phase = 'holed';
       this.controls.setEnabled(false);
       // In the basket: let the chains and confetti have their moment before the card.
-      window.setTimeout(() => this.showCard(out.done === 'holed'), out.done === 'holed' ? 1800 : 900);
+      const holed = out.done === 'holed';
+      window.setTimeout(() => this.onHoleDone?.(this.round.scorecard(this.holeLabel), holed), holed ? 1800 : 900);
       return;
     }
     this.enterAim();
-  }
-
-  private showCard(holed: boolean): void {
-    const def = this.hole.def;
-    void this.finish.show(this.round.scorecard(def.name), {
-      board: def.id,
-      course: this.course.name,
-      holeNumber: Number.parseInt(def.id.replace(/^\D*-?/, ''), 10) || 1,
-      holed,
-      practice: !!this.debug,
-    });
   }
 
   // --- Frame update -----------------------------------------------------------
