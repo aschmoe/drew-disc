@@ -49,6 +49,21 @@ jobs:
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
 
+      # The scoreboard goes first, so the new game finds it ready. Its container only restarts
+      # when the code changed (it is watched by a systemd unit made by deploy/setup-server.sh).
+      - name: Upload scoreboard API
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          ssh "deploy@$DEPLOY_HOST" "mkdir -p /srv/drew-disc/api/app"
+          CHANGES=$(rsync -rz --checksum --delete --itemize-changes --chmod=D755,F644 dist-server/ "deploy@$DEPLOY_HOST:/srv/drew-disc/api/app/")
+          if [ -n "$CHANGES" ]; then
+            echo "$CHANGES"
+            ssh "deploy@$DEPLOY_HOST" "date > /srv/drew-disc/api/restart"
+            echo "Scoreboard restart requested"
+          else
+            echo "Scoreboard unchanged"
+          fi
+
       - name: Upload and switch release
         if: steps.check.outputs.ready == 'true'
         run: |
@@ -57,6 +72,3 @@ jobs:
           # Atomic symlink swap, then keep the 5 newest releases for rollback
           ssh "deploy@$DEPLOY_HOST" "cd /srv/drew-disc && ln -sfn releases/$REL current.tmp && mv -Tf current.tmp current && ls -1dt releases/*/ | tail -n +6 | xargs -r rm -rf"
           echo "Live: https://$DEPLOY_HOST ($REL)"
-
-      # The backend (leaderboards, multiplayer) arrives in milestone 4, with its own upload and
-      # restart step.

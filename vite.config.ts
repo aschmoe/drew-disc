@@ -16,7 +16,8 @@ export default defineConfig({
     // Three.js alone is ~550 kB minified (~145 kB gzipped); that's expected.
     chunkSizeWarningLimit: 800,
   },
-  server: { host: true },
+  // `npm run server` runs the scoreboard locally; the dev server forwards /api to it.
+  server: { host: true, proxy: { '/api': 'http://localhost:8787' } },
   test: {
     root: '.',
     include: ['test/**/*.test.ts'],

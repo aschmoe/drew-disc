@@ -17,6 +17,7 @@ import { Character, RELEASE_AT, releasePoint, type ThrowAnim } from '../world/ch
 import { Effects } from '../world/effects';
 import { buildDiscMesh, teePadLift } from '../world/props';
 import { CameraRig } from './camera';
+import { HoleFinish } from './finish';
 import { Keyboard } from './keyboard';
 import { FlightPlayback, makeLine, setLine, THROW_ANIM_SECONDS } from './playback';
 import { Round } from './round';
@@ -53,6 +54,7 @@ export class Game {
   private hasThrown = false;
 
   private overlay: Overlay;
+  private finish: HoleFinish;
   private controls: Controls;
   private keyboard: Keyboard;
   private debug: DebugPanel | null = null;
@@ -73,7 +75,7 @@ export class Game {
 
   constructor(
     private hole: Hole,
-    course: CourseDef,
+    private course: CourseDef,
     scene: THREE.Scene,
     private camera: THREE.PerspectiveCamera,
     sun: THREE.DirectionalLight,
@@ -88,6 +90,7 @@ export class Game {
     this.rig = new CameraRig(camera, sun, hole.world);
 
     this.overlay = new Overlay(uiRoot);
+    this.finish = new HoleFinish(uiRoot, (t) => this.overlay.showToast(t), () => this.restart());
     this.controls = new Controls(uiRoot, DEFAULT_BAG, {
       settings: () => this.settings,
       update: (p) => this.update(p),
@@ -138,7 +141,7 @@ export class Game {
     this.result = null;
     this.markers.clear();
     this.playback.hideTrail();
-    this.overlay.hideScorecard();
+    this.finish.hide();
     this.settings = { ...this.settings, aimOffsetDeg: 0, hyzerDeg: 0, launchDeg: LAUNCH_DEFAULT, power: 0.9, discId: DEFAULT_BAG[1] };
     this.controls.setEnabled(true);
     this.enterAim();
@@ -156,7 +159,7 @@ export class Game {
     const x = teeW.x + (b.x - teeW.x) * f;
     const z = teeW.z + (b.z - teeW.z) * f;
     this.round.lie = v3(x, this.hole.world.groundHeight(x, z), z);
-    this.overlay.hideScorecard();
+    this.finish.hide();
     this.enterAim();
     this.snapCamera();
   }
@@ -348,14 +351,21 @@ export class Game {
       this.phase = 'holed';
       this.controls.setEnabled(false);
       // In the basket: let the chains and confetti have their moment before the card.
-      window.setTimeout(() => this.showCard(), out.done === 'holed' ? 1800 : 900);
+      window.setTimeout(() => this.showCard(out.done === 'holed'), out.done === 'holed' ? 1800 : 900);
       return;
     }
     this.enterAim();
   }
 
-  private showCard(): void {
-    this.overlay.showScorecard(this.round.scorecard(`SeaTac ${this.hole.def.name}`), () => this.restart());
+  private showCard(holed: boolean): void {
+    const def = this.hole.def;
+    void this.finish.show(this.round.scorecard(def.name), {
+      board: def.id,
+      course: this.course.name,
+      holeNumber: Number.parseInt(def.id.replace(/^\D*-?/, ''), 10) || 1,
+      holed,
+      practice: !!this.debug,
+    });
   }
 
   // --- Frame update -----------------------------------------------------------

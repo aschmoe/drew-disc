@@ -8,8 +8,9 @@ Design, decisions and milestones: `docs/DESIGN.md`.
 ```bash
 npm install          # .npmrc sets legacy-peer-deps (npm's peer resolver trips on vitest 4)
 npm run dev          # http://localhost:5173 ; flight lab at /tools/flight-lab.html
-npm test             # vitest: flight model, collisions, hole data
-npm run build        # typecheck + build to dist/
+npm run server       # scoreboard on :8787 (SQLite in .data/); npm run dev forwards /api to it
+npm test             # vitest: flight model, collisions, hole data, scoreboard
+npm run build        # typecheck + build to dist/ (game) and dist-server/ (scoreboard)
 ```
 
 ## Layout
@@ -21,15 +22,20 @@ npm run build        # typecheck + build to dist/
 - `client/src/world/` builds the Three.js scene; `client/src/ui/` is the DOM overlay.
 - `client/src/game/` is the play loop. `game.ts` wires it together; the parts beside it are
   `round.ts` (lie, strokes, what each throw did: no Three.js, tested headless, the part a server
-  would run), `camera.ts`, `playback.ts` (disc and trail along a flight), `keyboard.ts` and
-  `shot.ts` (release point, auto putt power).
-- `shared/` holds code for both client and (future) server: the disc catalog in `shared/discs.ts`.
+  would run), `camera.ts`, `playback.ts` (disc and trail along a flight), `keyboard.ts`,
+  `shot.ts` (release point, auto putt power) and `finish.ts` (results card, posting, sharing).
+- `server/` is the scoreboard: Node built-ins only (`node:http`, `node:sqlite`), bundled by
+  esbuild to `dist-server/server.mjs`. `client/src/net/scores.ts` calls it; every call may fail
+  (offline, or no backend), and the game must still work then.
+- `shared/` holds code for both client and server: the disc catalog (`shared/discs.ts`) and the
+  leaderboard API types and validation (`shared/scores.ts`).
 - `client/tools/` holds dev-only pages, served by `npm run dev` and not built for production:
   `flight-lab.html` (flight tuning), `thrower.html` (every character pose; `?swing=forehand` for a
   frame-by-frame filmstrip of one throw, `?face` for the head close up), `jet.html` (the jet model).
 - Art and sound are procedural (`client/src/world/`, `client/src/audio/sound.ts`): no asset files.
 - `?debug` adds exact sliders, lie jumps (Putt 6 ft, Approach 60 ft) and exposes `window.renderer`
-  for draw-call checks. Keep the scene near or under ~200k triangles (shadow pass included).
+  for draw-call checks. Debug rounds never post to the leaderboard. Keep the scene near or under
+  ~200k triangles (shadow pass included).
 
 ## Rules that matter
 

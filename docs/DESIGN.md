@@ -259,13 +259,24 @@ animation. Decide by the end of milestone 2.
 
 ## 8. Scores and leaderboards
 
-- After each hole: score against par, a short replay of your best throw, and **Share** (Web Share
-  API on phones, copy link on desktop) with a little score card: *"Drew Disc, SeaTac #1: Birdie
-  (2). Beat it: <game link>"*.
-- **Leaderboards:** per hole (best score, ties broken by earliest) and per course (total strokes
-  over a full round, once there's more than one hole). Name only, no accounts.
-- Stored in SQLite on the backend (see below). Submissions are lightly sanity checked
-  (`strokes >= 1`), nothing more; it's for friends.
+- After each hole: the results card (score against par, each throw, the hole's leaderboard) and
+  **Share**: a picture of the score card (sky, firs, a jet, the throws) plus *"Drew Disc, SeaTac
+  #1: Birdie (2). Beat it: <game link>"*. Phones get the share sheet with the picture; browsers
+  without one copy the text. A replay of the best throw is still a nice-to-have.
+- **Leaderboards:** per hole (each name once at its best score, ties broken by earliest) and later
+  per course (total strokes over a full round, once there's more than one hole). Name only, no
+  accounts: the first finished hole asks for a name, the phone remembers it, later holes post on
+  their own. "Change name" moves that hole's score to the corrected name.
+- **Open to anyone with the link** (decided): no codes or logins, since the link only goes to
+  friends.
+- Only holed-out rounds post. A picked-up hole and anything played with `?debug` show the board
+  without posting.
+- Stored in SQLite on the backend (see below). Submissions are lightly sanity checked (1 to 30
+  strokes, a 16 character name of letters, digits and a little punctuation) and posts are rate
+  limited per IP; it's for friends. The API is `GET`/`POST /api/boards/<hole id>`
+  (`shared/scores.ts`). Each finished hole carries a random id, so a retried post counts once.
+- With no backend (the preview build, or offline) the card says the leaderboard can't be reached
+  and sharing still works.
 
 ## 9. Multiplayer (last milestone)
 
@@ -327,19 +338,21 @@ drew-disc/
         playback.ts         plays a flight back: disc, spin, trail, events
         keyboard.ts         desktop keys
         shot.ts             release point and auto putt power (pure TS)
-      ui/                 HUD and controls overlay
-      (later) net/        room transport: LocalRoom (single player) and WsRoom (multiplayer)
+        finish.ts           end of a hole: results card, posting the score, sharing
+      ui/                 HUD, controls, results card, share card picture
+      net/                scores.ts: leaderboard calls; (later) room transport for multiplayer
     public/courses/seatac/
       course.json         name, hole list, environment (sky, fog, sun, wind range)
       holes/01.json       tees, pins, par, terrain bumps, surfaces, OB, trees, tree fields
     tools/
       flight-lab.html     dev only: flight tuning harness (npm run dev, /tools/flight-lab.html)
       (later) hole-editor dev only: trace a hole over a local satellite image, export JSON
-  server/                 (milestone 4) http + ws rooms + SQLite
+  server/                 scoreboard: http.ts (API), store.ts (SQLite), main.ts; (later) ws rooms
   shared/
     discs.ts              disc catalog and default bag
+    scores.ts             leaderboard API types and validation, used by client and server
     (later) protocol.ts   message types used by both client and server
-  test/                   vitest: flight model, collisions, hole data
+  test/                   vitest: flight model, collisions, hole data, scoreboard
   deploy/                 setup-server.sh (one-time server setup)
   .github/workflows/deploy.yml
 ```
@@ -381,9 +394,14 @@ deploy key and known-hosts entry come from GitHub secrets (`DEPLOY_HOST`, `DEPLO
 
 Server specifics (addresses, ports, what else runs there) are kept out of this repo on purpose.
 
-Static site first (milestones 1 to 3), backend added later behind nginx on a local-only port;
-its proxy block will also need the WebSocket upgrade headers (`Upgrade`, `Connection`) for
-multiplayer.
+The scoreboard (milestone 4) runs in a locked-down `node:24-alpine` container that only nginx
+reaches, on a local port chosen when the setup script runs (`API_PORT=<port> bash
+setup-server.sh <domain>`; remembered on the server, kept out of this repo). The server code is
+bundled to one file (`dist-server/server.mjs`) with no packages, and the deploy uploads it and
+restarts the container only when it changed: the `deploy` user writes `api/restart`, and a root
+systemd path unit does the restart. The SQLite database lives in `/srv/drew-disc/api/data`.
+Multiplayer will also need the WebSocket upgrade headers (`Upgrade`, `Connection`) in the proxy
+block.
 
 The repo stays public (decided); the link is shared with Drew when it's ready.
 
@@ -394,7 +412,7 @@ The repo stays public (decided); the link is shared with Drew when it's ready.
 | 1 | Nov 5 | Repo scaffold, static deploy live, greybox hole 1, first flight model with the flight lab (**built**, deploy waiting on server setup) |
 | 2 | Nov 12 | Controls (pull and flick, angle, bag), basket catching, putting, OB, scoring: **playable greybox**, first playtest with you (**built**; debug sliders at `?debug`) |
 | 3 | Nov 19 | Art pass: terrain, firs, sky and fog, thrower and animations, jets, sound (**built**; all procedural, no asset files) |
-| 4 | Nov 26 | Backend: leaderboards, share cards, results screen |
+| 4 | Nov 26 | Backend: leaderboards, share cards, results screen (**built**; live once the server setup is re-run with `API_PORT`) |
 | 5 | Dec 3 | Real-time multiplayer rooms |
 | 6 | Dec 10 | Polish, phone testing across devices, bug fixes, freeze. **Send the link Dec 11.** |
 

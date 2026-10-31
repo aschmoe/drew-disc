@@ -22,7 +22,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #cfdcd8; col
 .hud-top .sep { display: inline-block; width: 1px; height: 12px; background: rgba(0,0,0,0.2); margin: 0 10px; vertical-align: middle; }
 
 .toast {
-  position: absolute; top: 22%; left: 50%; transform: translate(-50%, -10px); opacity: 0; transition: all 0.25s ease;
+  position: absolute; z-index: 20; top: 22%; left: 50%; transform: translate(-50%, -10px); opacity: 0; transition: all 0.25s ease;
   padding: 12px 22px; border-radius: 18px; background: var(--card); font-size: 22px; font-weight: 800; text-align: center; pointer-events: none;
   box-shadow: 0 6px 20px rgba(0,0,0,0.15); max-width: calc(100vw - 32px);
 }
@@ -121,7 +121,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #cfdcd8; col
 
 /* Hole complete. */
 .card-wrap { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; padding: 16px; background: rgba(15, 30, 20, 0.35); }
-.card { width: min(380px, 100%); padding: 22px 22px 18px; border-radius: 26px; background: #fff; text-align: center; box-shadow: 0 16px 50px rgba(0,0,0,0.3); display: grid; gap: 6px; }
+.card { width: min(380px, 100%); max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; padding: 22px 22px 18px; border-radius: 26px; background: #fff; text-align: center; box-shadow: 0 16px 50px rgba(0,0,0,0.3); display: grid; gap: 6px; }
 .card-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; }
 .card-title { font-size: 44px; font-weight: 900; line-height: 1; color: var(--accent); }
 .card-sub { font-size: 16px; font-weight: 700; }
@@ -131,6 +131,31 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #cfdcd8; col
 .card-throws .dot { width: 12px; height: 12px; border-radius: 50%; }
 .card-throws .tdist { font-variant-numeric: tabular-nums; font-weight: 700; }
 .card-throws .tout { font-size: 11px; font-weight: 800; opacity: 0.6; min-width: 46px; text-align: right; }
+.card-buttons { display: grid; grid-template-columns: 1fr 1.6fr; gap: 10px; margin-top: 8px; }
+.card-buttons .cta { margin-top: 0; }
+.share-btn { padding: 14px; border: 0; border-radius: 999px; background: #eef2ee; color: var(--ink); font: inherit; font-size: 16px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 0 #cdd6cd; }
+
+/* The hole's leaderboard, inside the card. */
+.board-head { margin-top: 6px; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; }
+.board { display: grid; gap: 6px; min-height: 40px; }
+.board-msg { font-size: 13px; font-weight: 700; opacity: 0.75; }
+.board-error { font-size: 12px; font-weight: 800; color: #c2276a; }
+.name-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.name-input { min-width: 0; padding: 10px 14px; border: 2px solid #dfe6df; border-radius: 999px; font: inherit; font-size: 16px; font-weight: 700; color: var(--ink); background: #fff; }
+.name-input:focus { outline: none; border-color: var(--accent-2); }
+.name-post { padding: 10px 16px; border: 0; border-radius: 999px; background: var(--accent-2); color: #fff; font: inherit; font-size: 14px; font-weight: 900; cursor: pointer; }
+.board-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; text-align: left; }
+.board-row { display: grid; grid-template-columns: 26px 1fr auto 30px; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 10px; background: #f6f8f5; font-size: 14px; }
+.board-row.mine { background: #ffe3ef; font-weight: 800; }
+.board-row .brank { font-weight: 900; opacity: 0.5; font-variant-numeric: tabular-nums; }
+.board-row .bname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.board-row .bstrokes { font-weight: 900; font-variant-numeric: tabular-nums; }
+.board-row .brel { font-size: 12px; font-weight: 800; opacity: 0.55; text-align: right; }
+.board-gap, .board-empty { text-align: center; font-size: 13px; font-weight: 700; opacity: 0.55; }
+.board-foot { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; font-weight: 700; opacity: 0.75; }
+.board-count { opacity: 0.7; }
+.link { padding: 0; border: 0; background: none; font: inherit; color: var(--accent-2); text-decoration: underline; cursor: pointer; }
+
 .cta { margin-top: 6px; padding: 14px; border: 0; border-radius: 999px; background: var(--accent); color: #fff; font: inherit; font-size: 17px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 0 #c2276a; }
 
 /* Debug panel (?debug). */
