@@ -1,7 +1,7 @@
-// Debug panel (add ?debug to the URL): exact sliders for power, aim and angle, a full flight line
+// Debug panel (add ?debug to the URL): exact sliders for power, aim, angle and launch, a full flight line
 // and a throw button with a perfectly clean release. Handy for tuning and testing lines.
 
-import { AIM_LIMIT, HYZER_LIMIT, MAX_POWER, type ShotSettings } from '../game/settings';
+import { AIM_LIMIT, HYZER_LIMIT, LAUNCH_MAX, LAUNCH_MIN, MAX_POWER, type ShotSettings } from '../game/settings';
 import { el } from './dom';
 
 export interface DebugHandlers {
@@ -13,16 +13,18 @@ export interface DebugHandlers {
   jumpTo(metersFromBasket: number): void;
 }
 
+type Key = 'power' | 'aim' | 'hyzer' | 'launch';
+
 export class DebugPanel {
   private panel = el('div', 'debug');
-  private inputs: Record<'power' | 'aim' | 'hyzer', HTMLInputElement>;
-  private values: Record<'power' | 'aim' | 'hyzer', HTMLSpanElement>;
+  private inputs: Record<Key, HTMLInputElement>;
+  private values: Record<Key, HTMLSpanElement>;
 
   constructor(
     root: HTMLElement,
     private h: DebugHandlers,
   ) {
-    const row = (key: 'power' | 'aim' | 'hyzer', label: string, min: number, max: number, step: number) => {
+    const row = (key: Key, label: string, min: number, max: number, step: number) => {
       const r = el('label', 'slider');
       const input = el('input');
       input.type = 'range';
@@ -34,7 +36,8 @@ export class DebugPanel {
       r.append(el('span', 'sname', label), input, v);
       input.oninput = () => {
         const n = Number(input.value);
-        this.h.update(key === 'power' ? { power: n } : key === 'aim' ? { aimOffsetDeg: n } : { hyzerDeg: n });
+        const patch: Record<Key, Partial<ShotSettings>> = { power: { power: n }, aim: { aimOffsetDeg: n }, hyzer: { hyzerDeg: n }, launch: { launchDeg: n } };
+        this.h.update(patch[key]);
       };
       this.panel.append(r);
       return { input, v };
@@ -42,8 +45,9 @@ export class DebugPanel {
     const p = row('power', 'Power', 0, MAX_POWER, 0.01);
     const a = row('aim', 'Aim', -AIM_LIMIT, AIM_LIMIT, 0.5);
     const hz = row('hyzer', 'Angle', -HYZER_LIMIT, HYZER_LIMIT, 1);
-    this.inputs = { power: p.input, aim: a.input, hyzer: hz.input };
-    this.values = { power: p.v, aim: a.v, hyzer: hz.v };
+    const l = row('launch', 'Launch', LAUNCH_MIN, LAUNCH_MAX, 0.5);
+    this.inputs = { power: p.input, aim: a.input, hyzer: hz.input, launch: l.input };
+    this.values = { power: p.v, aim: a.v, hyzer: hz.v, launch: l.v };
 
     const buttons = el('div', 'buttons');
     const line = el('button', 'pill', 'Full line');
@@ -73,5 +77,7 @@ export class DebugPanel {
     this.values.aim.textContent = `${s.aimOffsetDeg.toFixed(1)}°`;
     this.inputs.hyzer.value = String(s.hyzerDeg);
     this.values.hyzer.textContent = `${s.hyzerDeg}°`;
+    this.inputs.launch.value = String(s.launchDeg);
+    this.values.launch.textContent = `${s.launchDeg.toFixed(1)}°`;
   }
 }

@@ -60,6 +60,12 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #cfdcd8; col
 .angle-label { position: absolute; right: 100%; top: 50%; transform: translateY(-50%); margin-right: 6px; white-space: nowrap;
   padding: 4px 8px; border-radius: 999px; background: var(--card); font-size: 12px; font-weight: 800; }
 
+.launch-chip {
+  position: absolute; left: calc(12px + env(safe-area-inset-left, 0px)); top: 47%; transform: translateY(-50%);
+  padding: 6px 10px; border: 0; border-radius: 999px; background: var(--card); color: var(--ink);
+  font-size: 12px; font-weight: 800; box-shadow: 0 4px 14px rgba(0,0,0,0.12); cursor: pointer;
+}
+
 .bag-btn {
   position: absolute; left: calc(12px + env(safe-area-inset-left, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 8px; border: 0; border-radius: 999px; background: var(--card);

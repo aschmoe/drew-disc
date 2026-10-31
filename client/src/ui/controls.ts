@@ -1,16 +1,20 @@
 // The play controls, built for a thumb on a phone and working the same with a mouse:
 //
-// - Drag anywhere in the scene to aim.
+// - Drag anywhere in the scene to aim: left and right turn, up and down set the launch height
+//   (more gently, since it is the finer adjustment).
 // - Bag (bottom left): pick a disc.  Style (bottom right): backhand / forehand.
 // - Angle (right edge): drag up for anhyzer, down for hyzer. Hidden while putting.
+// - Launch chip (left edge): shows a high or low launch once the drag has moved it; tap to go
+//   back to a normal launch.
 // - Throw pad: put a thumb on the disc and PULL DOWN to set power (the ring fills; the green
 //   band is the sweet spot, red is muscling it), then FLICK UP to release. Easing back up lowers
 //   the power; only a quick flick throws. A crooked flick pulls or pushes the throw, and a faster
 //   flick is a cleaner release. Letting go without a flick cancels.
 
 import { DISCS } from '@shared/discs';
-import { HYZER_LIMIT, MAX_POWER, type ShotSettings } from '../game/settings';
+import { HYZER_LIMIT, LAUNCH_DEFAULT, MAX_POWER, type ShotSettings } from '../game/settings';
 import { el, svg } from './dom';
+import { aimDragDelta } from './aimDrag';
 import { FlickGesture } from './gesture';
 
 export interface ThrowGesture {
@@ -28,8 +32,8 @@ export interface ControlsHandlers {
   pulling(power: number | null): void;
   throwDisc(g: ThrowGesture): void;
   look(): void;
-  /** Aim drag, in degrees to add. */
-  aimBy(deltaDeg: number): void;
+  /** Scene drag: degrees to add to the aim and to the launch angle. */
+  aimBy(aimDeg: number, launchDeg: number): void;
 }
 
 const SWEET_LOW = 0.88;
@@ -45,6 +49,7 @@ export class Controls {
   private angle = el('div', 'angle');
   private angleThumb = el('div', 'angle-thumb');
   private angleLabel = el('div', 'angle-label');
+  private launchChip = el('button', 'launch-chip');
   private pad = el('div', 'pad');
   private padDisc = el('div', 'pad-disc');
   private padLabel = el('div', 'pad-label');
@@ -96,12 +101,13 @@ export class Controls {
     }
     this.bagSheet.hidden = true;
 
-    this.root.append(this.lookButton, this.angle, this.bagSheet, this.bagButton, this.styleButton, this.pad);
+    this.root.append(this.lookButton, this.angle, this.launchChip, this.bagSheet, this.bagButton, this.styleButton, this.pad);
     host.append(this.root);
 
     this.bagButton.onclick = () => (this.bagSheet.hidden = !this.bagSheet.hidden);
     this.styleButton.onclick = () => this.h.update({ style: this.h.settings().style === 'backhand' ? 'forehand' : 'backhand' });
     this.lookButton.onclick = () => this.h.look();
+    this.launchChip.onclick = () => this.h.update({ launchDeg: LAUNCH_DEFAULT });
     this.bindAngle();
     this.bindPad();
     this.bindAim();
@@ -118,6 +124,10 @@ export class Controls {
     const t = (HYZER_LIMIT + s.hyzerDeg) / (2 * HYZER_LIMIT); // 0 = top (anhyzer), 1 = bottom (hyzer)
     this.angleThumb.style.top = `${t * 100}%`;
     this.angleLabel.textContent = s.hyzerDeg === 0 ? 'Flat' : s.hyzerDeg > 0 ? `Hyzer ${s.hyzerDeg}°` : `Anhyzer ${-s.hyzerDeg}°`;
+    const launch = Math.round(s.launchDeg);
+    this.launchChip.hidden = this.putting || launch === LAUNCH_DEFAULT;
+    this.launchChip.textContent = `${launch > LAUNCH_DEFAULT ? 'High' : 'Low'} ${launch}°`;
+    this.launchChip.setAttribute('aria-label', `Launch ${launch} degrees. Tap for a normal launch.`);
   }
 
   setEnabled(on: boolean): void {
@@ -129,6 +139,7 @@ export class Controls {
   setPutting(on: boolean, targetPower: number | null): void {
     this.putting = on;
     this.angle.hidden = on;
+    this.render();
     this.root.classList.toggle('putting', on);
     this.ringTarget.style.display = targetPower === null ? 'none' : '';
     if (targetPower !== null) this.ringTarget.setAttribute('transform', `rotate(${(targetPower / MAX_POWER) * 360} 70 70)`);
@@ -214,19 +225,18 @@ export class Controls {
   }
 
   private bindAim(): void {
-    let last: number | null = null;
+    let last: { x: number; y: number } | null = null;
     this.canvas.addEventListener('pointerdown', (e) => {
       if (!this.enabled) return;
       this.bagSheet.hidden = true;
-      last = e.clientX;
+      last = { x: e.clientX, y: e.clientY };
       this.canvas.setPointerCapture(e.pointerId);
     });
     this.canvas.addEventListener('pointermove', (e) => {
       if (last === null) return;
-      const dx = e.clientX - last;
-      last = e.clientX;
-      // A full-width drag turns about 45 degrees, so small corrections are easy.
-      this.h.aimBy((dx / window.innerWidth) * 45);
+      const d = aimDragDelta(e.clientX - last.x, e.clientY - last.y, window.innerWidth);
+      last = { x: e.clientX, y: e.clientY };
+      this.h.aimBy(d.aimDeg, d.launchDeg);
     });
     const end = () => (last = null);
     this.canvas.addEventListener('pointerup', end);

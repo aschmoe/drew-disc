@@ -25,8 +25,11 @@ export class CameraRig {
     this.sunOffset = sun.position.clone().sub(sun.target.position);
   }
 
-  /** Over the thrower's right shoulder, facing `aimDeg`. */
-  aimPose(lie: V3, aimDeg: number, putt: boolean): CameraPose {
+  /**
+   * Over the thrower's right shoulder, facing `aimDeg`. `liftDeg` is how far the launch is above
+   * normal: the view tilts with it, so aiming high looks up the way aiming right looks right.
+   */
+  aimPose(lie: V3, aimDeg: number, putt: boolean, liftDeg = 0): CameraPose {
     const fwd = headingToDir(aimDeg);
     const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
     const at = new THREE.Vector3(lie.x, lie.y, lie.z);
@@ -49,7 +52,8 @@ export class CameraRig {
       const look = new THREE.Vector3(b.x, b.base + 0.55, b.z).lerp(at.clone().add(new THREE.Vector3(fwd.x * dist, 0.55, fwd.z * dist)), 0.5);
       return { pos, look };
     }
-    return { pos, look: at.clone().add(new THREE.Vector3(fwd.x * 35, 5, fwd.z * 35)) };
+    const rise = 5 + 35 * Math.tan((liftDeg * Math.PI) / 180);
+    return { pos, look: at.clone().add(new THREE.Vector3(fwd.x * 35, rise, fwd.z * 35)) };
   }
 
   /** From behind the basket, looking back down the fairway at the lie. */

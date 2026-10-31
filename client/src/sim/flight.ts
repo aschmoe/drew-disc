@@ -34,7 +34,7 @@ export interface ThrowInput {
   aimDeg: number;
   /** Release angle. Positive = hyzer (outside edge down), negative = anhyzer. */
   hyzerDeg: number;
-  /** Launch angle of the flight path above horizontal. */
+  /** Launch angle of the flight path above horizontal. Defaults to `DEFAULT_LAUNCH_DEG`. */
   launchDeg?: number;
   /** Disc pitch relative to the launch angle. Slightly nose down is good form. */
   noseDeg?: number;
@@ -96,6 +96,9 @@ export interface FlightResult {
   restSurface: Surface;
   flightTime: number;
 }
+
+/** Launch angle when the input names none: a normal throw, and a putt's softer lob. */
+export const DEFAULT_LAUNCH_DEG = { throw: 9, putt: 12 } as const;
 
 export const SIM_HZ = 240;
 export const SAMPLE_HZ = 60;
@@ -242,7 +245,7 @@ export function simulateThrow(input: ThrowInput, world: SimWorld, wind?: Wind): 
     spin = Math.max(0.3, spin - excess * 2);
   }
 
-  const launch = ((input.launchDeg ?? (putt ? 12 : 9)) * Math.PI) / 180;
+  const launch = ((input.launchDeg ?? DEFAULT_LAUNCH_DEG[putt ? 'putt' : 'throw']) * Math.PI) / 180;
   const heading0 = headingToDir(input.aimDeg + (input.flickDeg ?? 0));
   let vel = add(scale(heading0, speed * Math.cos(launch)), scale(UP, speed * Math.sin(launch)));
   const pitch = launch + pitchOffset;

@@ -21,7 +21,7 @@ import { Keyboard } from './keyboard';
 import { FlightPlayback, makeLine, setLine, THROW_ANIM_SECONDS } from './playback';
 import { Round } from './round';
 import { formatFeet } from './score';
-import { AIM_LIMIT, HYZER_LIMIT, MAX_POWER, type ShotSettings } from './settings';
+import { AIM_LIMIT, HYZER_LIMIT, LAUNCH_DEFAULT, LAUNCH_MAX, LAUNCH_MIN, MAX_POWER, type ShotSettings } from './settings';
 import { autoPuttPower, releaseFrom } from './shot';
 
 type Phase = 'aim' | 'flight' | 'holed';
@@ -41,6 +41,7 @@ export class Game {
     power: 0.9,
     aimOffsetDeg: 0,
     hyzerDeg: 0,
+    launchDeg: LAUNCH_DEFAULT,
     fullPreview: false,
   };
   private pullPower: number | null = null;
@@ -96,7 +97,12 @@ export class Game {
       },
       throwDisc: (g) => this.throwDisc(g),
       look: () => this.look(),
-      aimBy: (d) => this.update({ aimOffsetDeg: this.settings.aimOffsetDeg + d }),
+      aimBy: (aim, launch) =>
+        this.update({
+          aimOffsetDeg: this.settings.aimOffsetDeg + aim,
+          // A putt keeps its own soft launch, as it keeps a flat release.
+          launchDeg: this.settings.launchDeg + (this.round.isPutt() ? 0 : launch),
+        }),
     }, canvas);
     this.keyboard = new Keyboard({
       settings: () => this.settings,
@@ -133,7 +139,7 @@ export class Game {
     this.markers.clear();
     this.playback.hideTrail();
     this.overlay.hideScorecard();
-    this.settings = { ...this.settings, aimOffsetDeg: 0, hyzerDeg: 0, power: 0.9, discId: DEFAULT_BAG[1] };
+    this.settings = { ...this.settings, aimOffsetDeg: 0, hyzerDeg: 0, launchDeg: LAUNCH_DEFAULT, power: 0.9, discId: DEFAULT_BAG[1] };
     this.controls.setEnabled(true);
     this.enterAim();
     this.snapCamera();
@@ -161,6 +167,7 @@ export class Game {
     const s = this.settings;
     s.aimOffsetDeg = Math.max(-AIM_LIMIT, Math.min(AIM_LIMIT, s.aimOffsetDeg));
     s.hyzerDeg = Math.max(-HYZER_LIMIT, Math.min(HYZER_LIMIT, s.hyzerDeg));
+    s.launchDeg = Math.max(LAUNCH_MIN, Math.min(LAUNCH_MAX, s.launchDeg));
     s.power = Math.max(0, Math.min(MAX_POWER, s.power));
     this.controls.render();
     this.debug?.render();
@@ -195,6 +202,7 @@ export class Game {
       power,
       aimDeg,
       hyzerDeg: putt ? 0 : s.hyzerDeg,
+      launchDeg: putt ? undefined : s.launchDeg,
       flickDeg,
       spin,
       from,
@@ -215,10 +223,11 @@ export class Game {
     }
     this.settings.aimOffsetDeg = 0;
     this.settings.hyzerDeg = 0;
+    this.settings.launchDeg = LAUNCH_DEFAULT;
     this.controls.setPutting(putt, this.puttTarget);
     this.controls.setEnabled(true);
     this.controls.showPower(null);
-    this.overlay.setHint(this.hasThrown ? null : 'Drag the scene to aim. Pull the disc down, then flick up to throw.');
+    this.overlay.setHint(this.hasThrown ? null : 'Drag the scene to aim, up or down to throw higher or lower. Pull the disc down, then flick up to throw.');
     this.update({});
   }
 
@@ -229,6 +238,11 @@ export class Game {
         `<span class="sep"></span><b>${formatFeet(this.round.basketDistance())}</b>` +
         `<span class="sep"></span>Wind ${this.wind.speed} m/s ${windArrow(this.wind.towardDeg - this.aimHeading())}`,
     );
+  }
+
+  /** Degrees the launch is above (or below) a normal throw; 0 when putting. */
+  private launchOffset(): number {
+    return this.round.isPutt() ? 0 : this.settings.launchDeg - LAUNCH_DEFAULT;
   }
 
   private refreshPreview(): void {
@@ -396,7 +410,7 @@ export class Game {
   }
 
   private aimPose() {
-    return this.rig.aimPose(this.round.lie, this.aimHeading(), this.round.isPutt());
+    return this.rig.aimPose(this.round.lie, this.aimHeading(), this.round.isPutt(), this.launchOffset());
   }
 
   private snapCamera(): void {
