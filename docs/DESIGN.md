@@ -123,21 +123,26 @@ settle all three.
 ### Hole 2
 
 From UDisc: **Par 3, 245 ft (~75 m)**, tee to the A pin, straight north. Traced from a UDisc
-satellite view Alex marked up (about 0.067 m per pixel, scaled off the 245 ft tee-to-A line; the
-tee sits just west of hole 1's basket) and Alex's tee photo. Numbers are estimates.
+satellite view (scaled off the 245 ft tee-to-A line; the tee sits just west of hole 1's basket)
+and Alex's tee photo, then reshaped from Alex's marked-up map. Numbers are estimates.
 
-- **The feature: the basket is completely under the canopy**, in a little room in the woods
-  reached through a **narrow entrance** about 3 m wide at disc height (brush on both sides, big
-  trees as the posts) roughly 62 m out. The trees over the basket are tall, with crowns from
-  about 7 m up, so a low line gets in and a lofted throw catches leaves and drops short.
-- **Early trees on the left:** tall, thin, high-canopied trees just off the left edge of the
-  lane from about 15 to 35 m out.
-- **The lane:** mown grass, narrow at the tee and a little wider through the middle, with
-  blackberry right up against the left of the tee and big leafy bushes on the right. Past about
-  47 m it runs into shaded dirt under the trees before the entrance.
-- Woods all round, deep behind the basket so a long miss stays in the trees. No OB.
-- `test/hole2.test.ts` pins the length, the clear line through the entrance, the gap width, the
-  canopy over the basket, and that a low putter parks it while a lofted drive drops short.
+- **The lane is narrow:** mown grass about 7 to 9 m wide, its left edge near x -5 and its right
+  edge from about +2 near the tee to +4 by 45 m out. Blackberry presses in on the left of the tee
+  and big leafy bushes on the right; low brush lines the right edge.
+- **Early trees on the left:** tall, thin, high-canopied trees in a line along the left edge
+  from about 18 to 40 m out.
+- **More open woods beyond them**, left of the lane from about 19 to 63 m out: long grass under
+  a few big scattered trees, with no brush. A miss left there has a way back; a miss right is in
+  thick woods.
+- **The way in is tight:** from about 48 to 63 m the lane becomes a chute about 3 m wide at disc
+  height, lined by pairs of bushes with small trees and two big trees at its mouth.
+- **The basket is completely under the canopy**, in a little room in the woods at the end of the
+  chute. The trees over it are tall, with crowns from about 7 m up, so a low line gets in and a
+  lofted throw catches leaves and drops short. Woods are deep behind the basket so a long miss
+  stays in the trees. No OB.
+- `test/hole2.test.ts` pins the length, the clear line up the middle, the chute's width at disc
+  height, the canopy over the basket, and that a low putter parks it while a lofted drive drops
+  short.
 
 **Hole authoring tool.** A dev-only editor page lays the satellite screenshot on the ground plane
 so trees, OB lines and pins can be placed by clicking, then exports the hole JSON. The screenshot

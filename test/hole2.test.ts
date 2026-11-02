@@ -32,12 +32,28 @@ describe('SeaTac hole 2', () => {
     }
   });
 
-  it('has a narrow entrance: brush on both sides of a gap of about 3 m', () => {
-    const low = hole.trees.filter((t) => Math.abs(-t.z - 62) < 2 && Math.abs(t.x) < 6);
-    const left = Math.max(...low.filter((t) => t.x < 0).map((t) => t.x + t.canopyRx));
-    const right = Math.min(...low.filter((t) => t.x > 0).map((t) => t.x - t.canopyRx));
-    expect(right - left).toBeGreaterThan(2.5);
-    expect(right - left).toBeLessThan(4.5);
+  it('has a tight chute in: about 3 m clear at disc height, from about 48 to 63 m out', () => {
+    // At disc height only bushes (their whole canopy) and trunks block. Walk up the chute and
+    // measure the clear width either side of the line.
+    const reach = (t: (typeof hole.trees)[number], dy: number) => {
+      const r = t.kind === 'bush' ? t.canopyRx : t.trunkRadius;
+      return Math.abs(dy) < r ? Math.sqrt(r * r - dy * dy) : -Infinity;
+    };
+    let tightest = Infinity;
+    for (let y = 48; y <= 63; y += 0.25) {
+      let left = -Infinity;
+      let right = Infinity;
+      for (const t of hole.trees) {
+        const ty = -t.z;
+        const r = reach(t, y - ty);
+        if (r === -Infinity || Math.abs(t.x) > 8) continue;
+        if (t.x < 0) left = Math.max(left, t.x + r);
+        else right = Math.min(right, t.x - r);
+      }
+      tightest = Math.min(tightest, right - left);
+    }
+    expect(tightest).toBeGreaterThan(2.4);
+    expect(tightest).toBeLessThan(3.6);
   });
 
   it('puts the basket under the canopy', () => {
