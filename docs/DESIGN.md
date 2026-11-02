@@ -45,8 +45,11 @@ shading, soft gradient sky, light fog that layers the tree lines, warm late-afte
   crosses low overhead every 40 to 90 seconds with a rumble, a moving shadow and a little camera
   shake. A rare "golden jet" flyover could be an easter egg.
 - **Birthday touches:** "Drew Disc" title card, tee sign reading *Hole 1, Par 3, 360 ft, Happy
-  Birthday Drew*, discs with made-up names (see [Discs](#6-discs)), confetti and a chain "ching"
-  on an ace.
+  Birthday Drew*, discs with made-up names (see [Discs](#6-discs)), confetti and a fanfare on a
+  birdie or an ace.
+- **Basket sounds:** the chains go "chheshhh" (a sharp hit, then a hiss of sliding links with tiny
+  clicks through it, not a bell), a disc landing in the tray clunks just after, a drop straight
+  into the tray is only the clunk, and the rim or top band is a brighter clank.
 - **UI:** big rounded buttons, chunky readable type, everything reachable by a thumb in the bottom
   third of the screen.
 
