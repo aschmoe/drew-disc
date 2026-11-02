@@ -5,7 +5,7 @@
 // The course lists a hole file per slot (most slots repeat hole 1 for now). Before each hole the
 // session asks boot's `showHole` for that slot, which swaps the scenery when the file changes.
 
-import type { CourseDef } from '../content/hole';
+import { loadHoleDef, type CourseDef, type HoleDef } from '../content/hole';
 import { newScoreId } from '../net/scores';
 import { Menu, type MenuChoice } from '../ui/menu';
 import { HoleFinish } from './finish';
@@ -31,6 +31,8 @@ export class Session {
   private round: RoundState | null = null;
   /** Slot of the single hole being played, when not in a round. */
   private single = 0;
+  /** Hole files read so far, for the hole picker's par and length. */
+  private defs = new Map<string, Promise<HoleDef>>();
 
   constructor(
     private game: Game,
@@ -55,8 +57,8 @@ export class Session {
     const saved = loadRound(this.course);
     const pick = (format: RoundFormat): MenuChoice => ({
       label: FORMATS[format].label,
-      detail: format === 'one' ? 'Hole 1, as many times as you like' : `${roundSlots(this.course, format).length} holes, one score`,
-      run: () => void this.begin(format),
+      detail: format === 'one' ? 'Pick any hole, play it as often as you like' : `${roundSlots(this.course, format).length} holes, one score`,
+      run: () => (format === 'one' ? void this.showHolePicker() : void this.begin(format)),
     });
     const resume: MenuChoice | undefined = saved
       ? {
@@ -68,14 +70,37 @@ export class Session {
     this.menu.show(`${this.course.name} · ${this.course.location ?? ''}`.replace(/ · $/, ''), [pick('full'), pick('front'), pick('back'), pick('one')], resume);
   }
 
-  private async begin(format: RoundFormat): Promise<void> {
-    if (format === 'one') {
-      this.round = null;
-      this.single = 0;
-      await this.showHole(this.course.holes[this.single], this.single + 1);
-      this.game.startHole(`Hole ${this.single + 1}`, '', true);
-      return;
+  private async showHolePicker(): Promise<void> {
+    this.game.idle();
+    const files = this.course.holes;
+    const defs = await Promise.all(files.map((f) => this.holeDef(f).catch(() => null)));
+    const holes = files.map((_, i) => {
+      const d = defs[i];
+      return { number: i + 1, detail: d ? `Par ${d.par} · ${d.lengthFt} ft` : '' };
+    });
+    this.menu.showHoles(holes, (slot) => void this.playSingle(slot), () => this.showMenu());
+  }
+
+  private holeDef(file: string): Promise<HoleDef> {
+    let d = this.defs.get(file);
+    if (!d) {
+      d = loadHoleDef(this.course.id, file);
+      // A failed read can be tried again next time the picker opens.
+      d.catch(() => this.defs.delete(file));
+      this.defs.set(file, d);
     }
+    return d;
+  }
+
+  /** One hole on its own (its own board, replays allowed). */
+  private async playSingle(slot: number): Promise<void> {
+    this.round = null;
+    this.single = slot;
+    await this.showHole(this.course.holes[slot], slot + 1);
+    this.game.startHole(`Hole ${slot + 1}`, '', true);
+  }
+
+  private async begin(format: Exclude<RoundFormat, 'one'>): Promise<void> {
     const r: RoundState = { v: 1, course: this.course.id, format, id: newScoreId(), scores: [] };
     saveRound(r);
     return this.playNext(r);
@@ -103,8 +128,8 @@ export class Session {
     };
     if (!r) {
       void this.finish.showHole(sc, { ...holeInfo, holeNumber: this.single + 1 }, {
-        next: { label: 'Play again', run: () => void this.begin('one') },
-        menu: () => this.showMenu(),
+        next: { label: 'Play again', run: () => void this.playSingle(this.single) },
+        menu: () => void this.showHolePicker(),
       });
       return;
     }

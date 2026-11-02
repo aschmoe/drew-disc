@@ -23,7 +23,7 @@ npm run build        # typecheck + build to dist/ (game) and dist-server/ (score
 - `client/src/game/` is the play loop. `game.ts` wires it together; the parts beside it are
   `round.ts` (lie, strokes, what each throw did: no Three.js, tested headless, the part a server
   would run), `camera.ts`, `playback.ts` (disc and trail along a flight), `keyboard.ts`,
-  `shot.ts` (release point, auto putt power), `session.ts` (start menu, single hole or a front 9 /
+  `shot.ts` (release point, auto putt power), `session.ts` (start menu, any single hole or a front 9 /
   back 9 / 18 round), `rounds.ts` (round formats, board ids, saved progress) and `finish.ts`
   (hole and round cards, posting, sharing). The course has 18 hole slots; slot 2 is hole 2 and
   the rest are hole 1 for now. `main.ts` builds each hole's scenery as one group and swaps it when

@@ -283,7 +283,8 @@ animation. Decide by the end of milestone 2.
   #1: Birdie (2). Beat it: <game link>"*. Phones get the share sheet with the picture; browsers
   without one copy the text. A replay of the best throw is still a nice-to-have.
 - **Rounds:** the start menu offers **18 holes**, **Front 9** (slots 1 to 9), **Back 9** (10 to
-  18) and **Single hole**. The course lists 18 hole slots (`course.json` `holes`): slot 2 is hole 2
+  18) and **Single hole**, which opens a picker of all 18 holes (par and length on each) and plays
+  the chosen one as often as you like, posting to that hole's board. The course lists 18 hole slots (`course.json` `holes`): slot 2 is hole 2
   and, until more holes are built, every other slot is hole 1. Each hole in a round gets its card (with "thru 4, +1") and
   posts to that slot's board; after the last hole the round card shows every hole and posts the
   total. A picked-up hole counts its strokes (par + 4) in the round. Progress is saved on the

@@ -155,6 +155,12 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #cfdcd8; col
 .menu-choice.resume { background: var(--accent); color: #fff; box-shadow: 0 4px 0 #c2276a; }
 .menu-choice.resume .mdetail { opacity: 0.85; }
 
+/* The hole picker behind "Single hole". */
+.hole-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
+.hole-pick { display: grid; gap: 1px; padding: 8px 4px; border: 0; border-radius: 14px; background: #f1f5f0; color: var(--ink); font: inherit; cursor: pointer; box-shadow: 0 3px 0 #d6ded5; }
+.hole-pick .hnum { font-size: 20px; font-weight: 900; line-height: 1.1; }
+.hole-pick .hdetail { font-size: 11px; font-weight: 700; opacity: 0.6; white-space: nowrap; }
+
 /* The hole's leaderboard, inside the card. */
 .board-head { margin-top: 6px; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; }
 .board { display: grid; gap: 6px; min-height: 40px; }
