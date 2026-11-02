@@ -4,7 +4,7 @@
 // wind flag. All seeded, all instanced where there are many.
 
 import * as THREE from 'three';
-import type { EnvironmentDef, Hole } from '../content/hole';
+import { TEE_FURNITURE, type EnvironmentDef, type Hole } from '../content/hole';
 import { headingToDir, mapToWorld, type MapPoint } from '../sim/frame';
 import { createRng } from '../sim/rng';
 import type { Wind } from '../sim/flight';
@@ -311,7 +311,7 @@ export function buildTeeSign(hole: Hole, number = hole.def.number): THREE.Group 
     g.add(p);
   }
   g.add(board);
-  g.position.set(base.x - 2.6, base.y, base.z - 1.2);
+  g.position.set(base.x + TEE_FURNITURE.sign.dx, base.y, base.z - TEE_FURNITURE.sign.dy);
   g.rotation.y = -0.45;
   g.traverse((o) => {
     if (o instanceof THREE.Mesh) o.castShadow = true;
@@ -335,7 +335,8 @@ export function buildWindFlag(hole: Hole): Animated {
   holder.add(flag);
   g.add(pole, holder);
   // Ahead of the tee on the left, where the thrower sees it while lining up.
-  g.position.set(base.x - 4.2, hole.world.groundHeight(base.x - 4.2, base.z - 9), base.z - 9);
+  const { dx, dy } = TEE_FURNITURE.flag;
+  g.position.set(base.x + dx, hole.world.groundHeight(base.x + dx, base.z - dy), base.z - dy);
   const rest = Float32Array.from(cloth.attributes.position.array as Float32Array);
 
   return {
