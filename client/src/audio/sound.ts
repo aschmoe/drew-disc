@@ -14,6 +14,8 @@ export class Sound {
   private jetGain: GainNode | null = null;
   private muted = false;
   private birdTimer = 0;
+  /** When the chains last sounded, so a catch's tray clunk lands just after them. */
+  private lastChains = -1;
 
   constructor() {
     try {
@@ -74,13 +76,15 @@ export class Sound {
         this.whoosh(speed);
         break;
       case 'chains':
-      case 'in-basket':
         this.chains(Math.min(1, 0.45 + speed / 16));
+        break;
+      case 'in-basket':
+        // After a chain catch the disc slides down and lands in the tray a moment later.
+        this.trayClunk(Math.min(1, 0.4 + speed / 18), this.now - this.lastChains < 0.05 ? 0.16 : 0);
         break;
       case 'spit-out':
       case 'blow-through':
         this.chains(0.7);
-        window.setTimeout(() => this.clank(0.5), 90);
         break;
       case 'band':
       case 'cage':
@@ -157,19 +161,35 @@ export class Sound {
     src.stop(at + dur + 0.05);
   }
 
-  /** The chain "ching": inharmonic metal partials struck several times as the chains rattle. */
+  /**
+   * The chains: a "chheshhh", not a bell. A sharp bright "ch" as the disc hits, then a hiss of
+   * dozens of loose links sliding over each other that dies away over most of a second, with
+   * tiny link clicks scattered through it (dense at first, thinning out) and only a faint ring.
+   */
   private chains(strength: number): void {
-    const hits = 3 + Math.round(strength * 4);
-    for (let h = 0; h < hits; h++) {
-      const at = this.now + h * (0.025 + Math.random() * 0.05);
-      const v = (0.07 + strength * 0.07) * (1 - h / (hits + 2));
-      for (const base of [1180, 1730, 2410, 3150, 4020]) {
-        this.tone(base * (0.97 + Math.random() * 0.06), at, 0.5 + Math.random() * 0.7, v * (1200 / base), 'sine');
-      }
-      this.noiseBurst(at, 0.06, v * 0.8, 'highpass', 5000);
+    const t0 = this.now;
+    this.lastChains = t0;
+    this.noiseBurst(t0, 0.07, 0.42 * strength, 'highpass', 4000, 0.7);
+    this.noiseBurst(t0 + 0.03, 0.55 + 0.4 * strength, 0.2 + 0.16 * strength, 'bandpass', 5200, 0.8);
+    this.noiseBurst(t0 + 0.02, 0.35 + 0.2 * strength, 0.12 + 0.1 * strength, 'bandpass', 3000, 1.4);
+    const clicks = 14 + Math.round(strength * 22);
+    for (let i = 0; i < clicks; i++) {
+      const r = Math.random();
+      const at = t0 + 0.7 * r * r;
+      const fade = 1 - (at - t0) / 0.8;
+      this.tone(3200 + Math.random() * 5200, at, 0.03 + Math.random() * 0.05, (0.03 + 0.032 * strength) * fade, 'triangle');
     }
+    for (const base of [2410, 3150]) this.tone(base * (0.97 + Math.random() * 0.06), t0, 0.5, 0.008 * strength, 'sine');
   }
 
+  /** The disc landing in the tray: a dull, short metal clunk, duller than the rim. */
+  private trayClunk(strength: number, delay: number): void {
+    const at = this.now + delay;
+    for (const base of [290, 470, 830]) this.tone(base * (0.97 + Math.random() * 0.06), at, 0.22, 0.17 * strength * (290 / base), 'triangle');
+    this.noiseBurst(at, 0.09, 0.28 * strength, 'lowpass', 1100, 0.8);
+  }
+
+  /** The rim or the top band: a bright metal clank. */
   private clank(strength: number): void {
     for (const base of [420, 760, 1290]) this.tone(base * (0.98 + Math.random() * 0.04), this.now, 0.35, 0.09 * strength, 'square');
     this.noiseBurst(this.now, 0.08, 0.12 * strength, 'bandpass', 2400, 2);

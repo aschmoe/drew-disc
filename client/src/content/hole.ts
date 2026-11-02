@@ -69,6 +69,16 @@ export interface Hole {
   world: SimWorld;
 }
 
+/**
+ * Where the tee furniture stands, in meters from the tee (MAP frame: x east, y north): the tee sign
+ * just left of the pad and the wind flag a little ahead on the left. Generated trees and bushes
+ * keep `clear` meters (plus their own canopy) away, so nothing grows through them.
+ */
+export const TEE_FURNITURE = {
+  sign: { dx: -2.6, dy: 1.2, clear: 1.0 },
+  flag: { dx: -4.2, dy: 9, clear: 0.6 },
+} as const;
+
 /** Default sizes by kind, scaled from a tree's height. */
 function makeTree(kind: TreeKind, x: number, z: number, base: number, height: number, canopy: number, seed: number): TreeInstance {
   switch (kind) {
@@ -127,6 +137,9 @@ export function buildHole(def: HoleDef, pinId?: string): Hole {
   };
   const isOBMap = (x: number, y: number) => def.ob.some((o) => pointInPolygon(x, y, o.polygon));
   const cleared = (x: number, y: number) => (def.clearings ?? []).some((c) => pointInPolygon(x, y, c.polygon));
+  const tee = def.tees[0].pos;
+  const onFurniture = (x: number, y: number, canopy: number) =>
+    Object.values(TEE_FURNITURE).some((f) => Math.hypot(x - (tee[0] + f.dx), y - (tee[1] + f.dy)) < f.clear + canopy);
 
   const trees: TreeInstance[] = [];
   let treeSeed = 1;
@@ -154,7 +167,7 @@ export function buildHole(def: HoleDef, pinId?: string): Hole {
         const y = gy + rng.range(0.1, 0.9) * field.spacing;
         const height = rng.range(size.height[0], size.height[1]);
         const canopy = rng.range(size.canopy[0], size.canopy[1]);
-        if (!pointInPolygon(x, y, field.polygon) || cleared(x, y) || isOBMap(x, y)) continue;
+        if (!pointInPolygon(x, y, field.polygon) || cleared(x, y) || isOBMap(x, y) || onFurniture(x, y, canopy)) continue;
         place(field.kind, [x, y], height, canopy);
       }
     }

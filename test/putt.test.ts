@@ -43,4 +43,15 @@ describe('putting from the hand', () => {
       expect(made.length, `${m} m at power ${power}`).toBe(8);
     }
   });
+
+  it('a putt caught by the chains rings them, then lands in the basket once', () => {
+    const input = putt(4);
+    const r = simulateThrow(input(autoPuttPower(input, hole.world), 1), hole.world);
+    const kinds = r.events.map((e) => e.kind);
+    expect(r.inBasket).toBe(true);
+    expect(kinds.filter((k) => k === 'in-basket')).toHaveLength(1);
+    expect(kinds.indexOf('chains')).toBeGreaterThanOrEqual(0);
+    expect(kinds.indexOf('chains')).toBeLessThan(kinds.indexOf('in-basket'));
+    expect(kinds).not.toContain('rest');
+  });
 });

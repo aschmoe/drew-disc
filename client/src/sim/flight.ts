@@ -341,6 +341,8 @@ export function simulateThrow(input: ThrowInput, world: SimWorld, wind?: Wind): 
       const b = collideBasket(world, prev, pos, vel, wasInChains, rng);
       wasInChains = b.inChains;
       if (b.kind) {
+        // Caught by the chains: they ring first, then the disc drops into the tray.
+        if (b.kind === 'in-basket' && b.inChains) event(t, 'chains');
         event(t, b.kind);
         if (b.kind === 'in-basket') {
           inBasket = true;
@@ -380,7 +382,8 @@ export function simulateThrow(input: ThrowInput, world: SimWorld, wind?: Wind): 
   // Lying still: flat on the ground (or in the tray).
   if (!inBasket) normal = UP;
   record();
-  event(t, inBasket ? 'in-basket' : 'rest');
+  // In the basket, 'in-basket' already fired when it went in.
+  if (!inBasket) event(t, 'rest');
   const ob = !inBasket && world.isOB(pos.x, pos.z);
   return {
     path,

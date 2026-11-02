@@ -45,8 +45,11 @@ shading, soft gradient sky, light fog that layers the tree lines, warm late-afte
   crosses low overhead every 40 to 90 seconds with a rumble, a moving shadow and a little camera
   shake. A rare "golden jet" flyover could be an easter egg.
 - **Birthday touches:** "Drew Disc" title card, tee sign reading *Hole 1, Par 3, 360 ft, Happy
-  Birthday Drew*, discs with made-up names (see [Discs](#6-discs)), confetti and a chain "ching"
-  on an ace.
+  Birthday Drew*, discs with made-up names (see [Discs](#6-discs)), confetti and a fanfare on a
+  birdie or an ace.
+- **Basket sounds:** the chains go "chheshhh" (a sharp hit, then a hiss of sliding links with tiny
+  clicks through it, not a bell), a disc landing in the tray clunks just after, a drop straight
+  into the tray is only the clunk, and the rim or top band is a brighter clank.
 - **UI:** big rounded buttons, chunky readable type, everything reachable by a thumb in the bottom
   third of the screen.
 
@@ -119,6 +122,30 @@ Still open **(verify)**: where the A and B pins sit (C ships first), whether the
 property edge is OB or just rough (assumed: brush is heavy rough, the property edge and road are
 OB), and a look at the green around the basket. More frames from later in the same video would
 settle all three.
+
+### Hole 2
+
+From UDisc: **Par 3, 245 ft (~75 m)**, tee to the A pin, straight north. Traced from a UDisc
+satellite view (scaled off the 245 ft tee-to-A line; the tee sits just west of hole 1's basket)
+and Alex's tee photo, then reshaped from Alex's marked-up map. Numbers are estimates.
+
+- **The lane is narrow:** mown grass about 7 to 9 m wide, its left edge near x -5 and its right
+  edge from about +2 near the tee to +4 by 45 m out. Blackberry presses in on the left of the tee
+  and big leafy bushes on the right; low brush lines the right edge.
+- **Early trees on the left:** tall, thin, high-canopied trees in a line along the left edge
+  from about 18 to 40 m out.
+- **More open woods beyond them**, left of the lane from about 19 to 63 m out: long grass under
+  a few big scattered trees, with no brush. A miss left there has a way back; a miss right is in
+  thick woods.
+- **The way in is tight:** from about 48 to 63 m the lane becomes a chute about 3 m wide at disc
+  height, lined by pairs of bushes with small trees and two big trees at its mouth.
+- **The basket is completely under the canopy**, in a little room in the woods at the end of the
+  chute. The trees over it are tall, with crowns from about 7 m up, so a low line gets in and a
+  lofted throw catches leaves and drops short. Woods are deep behind the basket so a long miss
+  stays in the trees. No OB.
+- `test/hole2.test.ts` pins the length, the clear line up the middle, the chute's width at disc
+  height, the canopy over the basket, and that a low putter parks it while a lofted drive drops
+  short.
 
 **Hole authoring tool.** A dev-only editor page lays the satellite screenshot on the ground plane
 so trees, OB lines and pins can be placed by clicking, then exports the hole JSON. The screenshot
@@ -259,13 +286,36 @@ animation. Decide by the end of milestone 2.
 
 ## 8. Scores and leaderboards
 
-- After each hole: score against par, a short replay of your best throw, and **Share** (Web Share
-  API on phones, copy link on desktop) with a little score card: *"Drew Disc, SeaTac #1: Birdie
-  (2). Beat it: <game link>"*.
-- **Leaderboards:** per hole (best score, ties broken by earliest) and per course (total strokes
-  over a full round, once there's more than one hole). Name only, no accounts.
-- Stored in SQLite on the backend (see below). Submissions are lightly sanity checked
-  (`strokes >= 1`), nothing more; it's for friends.
+- After each hole: the results card (score against par, each throw, the hole's leaderboard) and
+  **Share**: a picture of the score card (sky, firs, a jet, the throws) plus *"Drew Disc, SeaTac
+  #1: Birdie (2). Beat it: <game link>"*. Phones get the share sheet with the picture; browsers
+  without one copy the text. A replay of the best throw is still a nice-to-have.
+- **Rounds:** the start menu offers **18 holes**, **Front 9** (slots 1 to 9), **Back 9** (10 to
+  18) and **Single hole**, which opens a picker of all 18 holes (par and length on each) and plays
+  the chosen one as often as you like, posting to that hole's board. The course lists 18 hole slots (`course.json` `holes`): slot 2 is hole 2
+  and, until more holes are built, every other slot is hole 1. Each hole in a round gets its card (with "thru 4, +1") and
+  posts to that slot's board; after the last hole the round card shows every hole and posts the
+  total. A picked-up hole counts its strokes (par + 4) in the round. Progress is saved on the
+  phone after each hole, so a closed tab offers "Continue" on the menu. No restarting a hole in a
+  round (that would be a mulligan); a single hole can be replayed freely. Wind is rolled again
+  for each hole. When the next slot plays a different hole file, its scenery is built and swapped
+  in place (`buildHoleScene` in `main.ts`); the tee sign shows the slot's number.
+- **Leaderboards:** one per hole slot and one per kind of round (front 9, back 9, 18): each name
+  once at its best score, ties broken by earliest. Board ids end in a hash of the hole files they
+  cover (`seatac-04-1k2x9a`, `seatac-front-lj8e4y`), so when real holes replace the copies of
+  hole 1 those boards start fresh instead of mixing layouts. Name only, no accounts: the first finished hole asks for a name, the phone remembers it, later holes post on
+  their own. "Change name" moves that hole's score to the corrected name.
+- **Open to anyone with the link** (decided): no codes or logins, since the link only goes to
+  friends.
+- Only holed-out rounds post. A picked-up hole and anything played with `?debug` show the board
+  without posting.
+- Stored in SQLite on the backend (see below). Submissions are lightly sanity checked (1 to 30
+  strokes per hole, up to 18 holes, a 16 character name of letters, digits and a little
+  punctuation) and posts are rate limited per IP; it's for friends. The API is
+  `GET`/`POST /api/boards/<board id>`
+  (`shared/scores.ts`). Each finished hole carries a random id, so a retried post counts once.
+- With no backend (the preview build, or offline) the card says the leaderboard can't be reached
+  and sharing still works.
 
 ## 9. Multiplayer (last milestone)
 
@@ -327,19 +377,24 @@ drew-disc/
         playback.ts         plays a flight back: disc, spin, trail, events
         keyboard.ts         desktop keys
         shot.ts             release point and auto putt power (pure TS)
-      ui/                 HUD and controls overlay
-      (later) net/        room transport: LocalRoom (single player) and WsRoom (multiplayer)
+        session.ts          start menu, single hole or round, what comes next
+        rounds.ts           round formats, slots, board ids, saved progress (pure TS)
+        finish.ts           hole and round cards: posting the score, sharing
+      ui/                 HUD, controls, results card, share card picture
+      net/                scores.ts: leaderboard calls; (later) room transport for multiplayer
     public/courses/seatac/
-      course.json         name, hole list, environment (sky, fog, sun, wind range)
+      course.json         name, 18 hole slots (slot 2 is hole 02, the rest hole 01 for now)
       holes/01.json       tees, pins, par, terrain bumps, surfaces, OB, trees, tree fields
+      holes/02.json       hole 2, same shape
     tools/
       flight-lab.html     dev only: flight tuning harness (npm run dev, /tools/flight-lab.html)
       (later) hole-editor dev only: trace a hole over a local satellite image, export JSON
-  server/                 (milestone 4) http + ws rooms + SQLite
+  server/                 scoreboard: http.ts (API), store.ts (SQLite), main.ts; (later) ws rooms
   shared/
     discs.ts              disc catalog and default bag
+    scores.ts             leaderboard API types and validation, used by client and server
     (later) protocol.ts   message types used by both client and server
-  test/                   vitest: flight model, collisions, hole data
+  test/                   vitest: flight model, collisions, hole data, scoreboard
   deploy/                 setup-server.sh (one-time server setup)
   .github/workflows/deploy.yml
 ```
@@ -381,9 +436,14 @@ deploy key and known-hosts entry come from GitHub secrets (`DEPLOY_HOST`, `DEPLO
 
 Server specifics (addresses, ports, what else runs there) are kept out of this repo on purpose.
 
-Static site first (milestones 1 to 3), backend added later behind nginx on a local-only port;
-its proxy block will also need the WebSocket upgrade headers (`Upgrade`, `Connection`) for
-multiplayer.
+The scoreboard (milestone 4) runs in a locked-down `node:24-alpine` container that only nginx
+reaches, on a local port chosen when the setup script runs (`API_PORT=<port> bash
+setup-server.sh <domain>`; remembered on the server, kept out of this repo). The server code is
+bundled to one file (`dist-server/server.mjs`) with no packages, and the deploy uploads it and
+restarts the container only when it changed: the `deploy` user writes `api/restart`, and a root
+systemd path unit does the restart. The SQLite database lives in `/srv/drew-disc/api/data`.
+Multiplayer will also need the WebSocket upgrade headers (`Upgrade`, `Connection`) in the proxy
+block.
 
 The repo stays public (decided); the link is shared with Drew when it's ready.
 
@@ -394,7 +454,7 @@ The repo stays public (decided); the link is shared with Drew when it's ready.
 | 1 | Nov 5 | Repo scaffold, static deploy live, greybox hole 1, first flight model with the flight lab (**built**, deploy waiting on server setup) |
 | 2 | Nov 12 | Controls (pull and flick, angle, bag), basket catching, putting, OB, scoring: **playable greybox**, first playtest with you (**built**; debug sliders at `?debug`) |
 | 3 | Nov 19 | Art pass: terrain, firs, sky and fog, thrower and animations, jets, sound (**built**; all procedural, no asset files) |
-| 4 | Nov 26 | Backend: leaderboards, share cards, results screen |
+| 4 | Nov 26 | Backend: leaderboards, share cards, results screen (**built**; live once the server setup is re-run with `API_PORT`) |
 | 5 | Dec 3 | Real-time multiplayer rooms |
 | 6 | Dec 10 | Polish, phone testing across devices, bug fixes, freeze. **Send the link Dec 11.** |
 
