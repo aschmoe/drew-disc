@@ -147,6 +147,30 @@ and Alex's tee photo, then reshaped from Alex's marked-up map. Numbers are estim
   height, the canopy over the basket, and that a low putter parks it while a lofted drive drops
   short.
 
+### Hole 3
+
+From UDisc: **Par 3, 370 ft (~113 m)** along the line to the B pin. The basket is straight north
+of the tee (362 ft as the crow flies); the line kinks left, then jogs right and back. Traced from
+a UDisc satellite view (scaled off the 370 ft line) and Alex's two photos and marked-up map. The
+canopy hides most of the hole from above, so the photos and the markup decide where the trees go.
+Numbers are estimates.
+
+- **A wooded tunnel.** A grass lane about 7 m wide under the trees, with wide dirt and wood chips
+  in front of the tee, and brush along both sides so a miss is in the undergrowth. No OB.
+- **Two big side trees** frame the tee shot about 12 to 15 m out: a thick-trunked conifer on the
+  left and a big conifer on the right with low branches reaching toward the line.
+- **Trees right in the way** from about 22 to 33 m: a pair either side, then a trunk about 2 m
+  left of a straight line at the basket, with a thin tree just right of the line behind it. A low
+  line threads them; a lofted drive catches their crowns and drops short.
+- A clump of big trees on the left from about 38 to 45 m, their crowns over the left of the lane,
+  then trees closing in from the right from 56 to 72 m as the lane bends left.
+- **A string of trees poking in from the left** near the bend, about 78 to 90 m out: low, wide
+  crowns and brush that are hard to get through, so the line jogs right past them and back in to
+  the basket. A drive that fades left ends up behind them.
+- `test/hole3.test.ts` pins the length along UDisc's line, a way through at trunk height, the two
+  side trees, the trunk in the way, the string from the left, and that a low threaded drive gets
+  past the bend while a lofted one drops short.
+
 ### Hole editor (planned, milestone 6)
 
 A dev-only page (`client/tools/`, like the flight lab: run by `npm run dev`, never built for
