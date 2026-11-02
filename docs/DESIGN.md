@@ -147,9 +147,25 @@ and Alex's tee photo, then reshaped from Alex's marked-up map. Numbers are estim
   height, the canopy over the basket, and that a low putter parks it while a lofted drive drops
   short.
 
-**Hole authoring tool.** A dev-only editor page lays the satellite screenshot on the ground plane
-so trees, OB lines and pins can be placed by clicking, then exports the hole JSON. The screenshot
-is used locally only and never committed or shipped (map imagery is copyrighted).
+### Hole editor (planned, milestone 6)
+
+A dev-only page (`client/tools/`, like the flight lab: run by `npm run dev`, never built for
+production) for editing a hole without touching JSON:
+
+- **Top-down map** of the hole, with a satellite screenshot as an optional tracing layer underneath.
+  The screenshot stays on the computer and is never committed or shipped (map imagery is
+  copyrighted).
+- **Trees and bushes** drawn as circles: drag to move, drag the edge to resize the canopy, a height
+  field, Delete to remove, and a palette to add a leafy tree, young tree, fir or bush.
+- **Tee and pins** as draggable markers, with the tee-to-pin length shown live in feet.
+- **3D preview** beside the map, using the game's own renderer, so the tee view updates as you
+  edit.
+- **Save** writes `holes/NN.json` back into the project through the dev server, with undo.
+- **Generated woods:** tree fields are edited as areas (move the outline, change the spacing), and
+  a **pin** action turns one generated tree into a hand-placed one, or removes it, so a single tree
+  inside the woods can be moved without moving the rest.
+- **Later, if wanted:** surfaces and OB as editable outlines, and a warning when the line from the
+  tee to the basket is blocked (the check `test/hole2.test.ts` already does).
 
 ## 4. Controls
 
@@ -456,7 +472,7 @@ The repo stays public (decided); the link is shared with Drew when it's ready.
 | 3 | Nov 19 | Art pass: terrain, firs, sky and fog, thrower and animations, jets, sound (**built**; all procedural, no asset files) |
 | 4 | Nov 26 | Backend: leaderboards, share cards, results screen (**built**; live once the server setup is re-run with `API_PORT`) |
 | 5 | Dec 3 | Real-time multiplayer rooms |
-| 6 | Dec 10 | Polish, phone testing across devices, bug fixes, freeze. **Send the link Dec 11.** |
+| 6 | Dec 10 | Polish, phone testing across devices, bug fixes, freeze. **Send the link Dec 11.** Before the push on more real holes: the **hole editor** (a dev tool, see [Hole editor](#hole-editor-planned-milestone-6)) |
 
 If anything slips, multiplayer is the flex item; the single-player hole with leaderboards stands
 on its own.
