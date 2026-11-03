@@ -22,7 +22,7 @@ import { FlightPlayback, makeLine, setLine, THROW_ANIM_SECONDS } from './playbac
 import { Round, type Scorecard } from './round';
 import { formatFeet } from './score';
 import { AIM_LIMIT, HYZER_LIMIT, LAUNCH_DEFAULT, LAUNCH_MAX, LAUNCH_MIN, MAX_POWER, type ShotSettings } from './settings';
-import { autoPuttPower, releaseFrom } from './shot';
+import { autoPuttPower, puttLaunchDeg, releaseFrom } from './shot';
 
 type Phase = 'aim' | 'flight' | 'holed';
 
@@ -47,6 +47,8 @@ export class Game {
   private pullPower: number | null = null;
   private previewDirty = true;
   private puttTarget: number | null = null;
+  /** The launch setting the putt power mark was worked out for. */
+  private puttTargetLaunch: number = LAUNCH_DEFAULT;
   private followClock = -1;
   private lookUntil = 0;
   private now = 0;
@@ -106,8 +108,8 @@ export class Game {
       aimBy: (aim, launch) =>
         this.update({
           aimOffsetDeg: this.settings.aimOffsetDeg + aim,
-          // A putt keeps its own soft launch, as it keeps a flat release.
-          launchDeg: this.settings.launchDeg + (this.round.isPutt() ? 0 : launch),
+          // Putts too: the drag tips a putt up or down from its automatic aim at the chains.
+          launchDeg: this.settings.launchDeg + launch,
         }),
     }, canvas);
     this.keyboard = new Keyboard({
@@ -207,6 +209,12 @@ export class Game {
     s.hyzerDeg = Math.max(-HYZER_LIMIT, Math.min(HYZER_LIMIT, s.hyzerDeg));
     s.launchDeg = Math.max(LAUNCH_MIN, Math.min(LAUNCH_MAX, s.launchDeg));
     s.power = Math.max(0, Math.min(MAX_POWER, s.power));
+    // A putt tipped up or down needs a different power to reach the chains: move the ring's mark.
+    if (this.phase === 'aim' && this.round.isPutt() && s.launchDeg !== this.puttTargetLaunch) {
+      this.puttTargetLaunch = s.launchDeg;
+      this.puttTarget = this.autoPuttPower('chain-seeker');
+      this.controls.setPutting(true, this.puttTarget);
+    }
     this.controls.render();
     this.debug?.render();
     this.previewDirty = true;
@@ -241,7 +249,8 @@ export class Game {
       power,
       aimDeg,
       hyzerDeg: putt ? 0 : s.hyzerDeg,
-      launchDeg: putt ? undefined : s.launchDeg,
+      // A putt aims its soft lob at the chains, uphill or down; the launch setting tips it from there.
+      launchDeg: putt ? puttLaunchDeg(from, b) + (s.launchDeg - LAUNCH_DEFAULT) : s.launchDeg,
       flickDeg,
       spin,
       from,
@@ -255,6 +264,8 @@ export class Game {
     const putt = this.round.isPutt();
     if (putt) {
       this.settings.discId = 'chain-seeker';
+      this.settings.launchDeg = LAUNCH_DEFAULT;
+      this.puttTargetLaunch = LAUNCH_DEFAULT;
       this.puttTarget = this.autoPuttPower('chain-seeker');
       this.settings.power = this.puttTarget;
     } else {

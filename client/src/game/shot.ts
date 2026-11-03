@@ -1,10 +1,10 @@
 // Where a throw starts and how hard a putt needs to be: pure, so tests check the same numbers
 // the game plays.
 
-import { simulateThrow, type ThrowInput, type Wind } from '../sim/flight';
+import { DEFAULT_LAUNCH_DEG, simulateThrow, type ThrowInput, type Wind } from '../sim/flight';
 import { headingToDir } from '../sim/frame';
 import { v3, type V3 } from '../sim/vec';
-import type { SimWorld } from '../sim/world';
+import type { SimBasket, SimWorld } from '../sim/world';
 
 /**
  * The world point a throw leaves from: `hand` is the release point in the thrower's frame
@@ -23,7 +23,7 @@ export function releaseFrom(lie: V3, headingDeg: number, hand: V3): V3 {
  */
 export function autoPuttPower(input: (power: number) => ThrowInput, world: SimWorld, wind?: Wind): number {
   const b = world.basket;
-  const target = b.base + 1.05;
+  const target = b.base + CHAIN_MIDDLE;
   const clear = { ...world, basket: { ...b, z: b.z + 1e4 } };
   const heightAtBasket = (power: number) => {
     const shot = input(power);
@@ -42,4 +42,18 @@ export function autoPuttPower(input: (power: number) => ThrowInput, world: SimWo
     else hi = mid;
   }
   return Math.round(((lo + hi) / 2) * 100) / 100;
+}
+
+/** Height of the middle of the chains above the basket's base, where a putt aims. */
+export const CHAIN_MIDDLE = 1.05;
+
+/**
+ * Launch angle for a putt from `from`: the usual soft lob, tipped up (or down) by the angle to the
+ * middle of the chains, so a putt up to a basket on a hill climbs to it instead of dying into
+ * the slope, and one down a hill doesn't sail over.
+ */
+export function puttLaunchDeg(from: V3, basket: SimBasket): number {
+  const dist = Math.max(0.5, Math.hypot(basket.x - from.x, basket.z - from.z));
+  const rise = basket.base + CHAIN_MIDDLE - from.y;
+  return DEFAULT_LAUNCH_DEG.putt + (Math.atan2(rise, dist) * 180) / Math.PI;
 }

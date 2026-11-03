@@ -5,7 +5,8 @@
 // - Bag (bottom left): pick a disc.  Style (bottom right): backhand / forehand.
 // - Angle (right edge): drag up for anhyzer, down for hyzer. Hidden while putting.
 // - Launch chip (left edge): shows a high or low launch once the drag has moved it; tap to go
-//   back to a normal launch.
+//   back to a normal launch. A putt aims at the chains on its own (uphill or down), and the drag
+//   tips it higher or lower from there.
 // - Throw pad: put a thumb on the disc and PULL DOWN to set power (the ring fills; the green
 //   band is the sweet spot, red is muscling it), then FLICK UP to release. Easing back up lowers
 //   the power; only a quick flick throws. A crooked flick pulls or pushes the throw, and a faster
@@ -125,9 +126,16 @@ export class Controls {
     this.angleThumb.style.top = `${t * 100}%`;
     this.angleLabel.textContent = s.hyzerDeg === 0 ? 'Flat' : s.hyzerDeg > 0 ? `Hyzer ${s.hyzerDeg}°` : `Anhyzer ${-s.hyzerDeg}°`;
     const launch = Math.round(s.launchDeg);
-    this.launchChip.hidden = this.putting || launch === LAUNCH_DEFAULT;
-    this.launchChip.textContent = `${launch > LAUNCH_DEFAULT ? 'High' : 'Low'} ${launch}°`;
-    this.launchChip.setAttribute('aria-label', `Launch ${launch} degrees. Tap for a normal launch.`);
+    this.launchChip.hidden = launch === LAUNCH_DEFAULT;
+    if (this.putting) {
+      // A putt already aims at the chains (up or down a hill); the drag tips it from there.
+      const tip = launch - LAUNCH_DEFAULT;
+      this.launchChip.textContent = `Putt ${tip > 0 ? 'higher' : 'lower'} ${Math.abs(tip)}°`;
+      this.launchChip.setAttribute('aria-label', `Putt tipped ${Math.abs(tip)} degrees ${tip > 0 ? 'higher' : 'lower'}. Tap to aim at the chains.`);
+    } else {
+      this.launchChip.textContent = `${launch > LAUNCH_DEFAULT ? 'High' : 'Low'} ${launch}°`;
+      this.launchChip.setAttribute('aria-label', `Launch ${launch} degrees. Tap for a normal launch.`);
+    }
   }
 
   setEnabled(on: boolean): void {

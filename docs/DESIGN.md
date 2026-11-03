@@ -264,7 +264,7 @@ line, adapted for one thumb.
   9 by default). Low lines stay under branches and come up short; high ones clear a canopy and
   fade more. It is the finer adjustment, so it moves 0.6 times as much per pixel as the aim, and
   a sideways drag barely changes it. The view tilts with it, and a chip on the left edge shows
-  a high or low launch (tap it to go back to normal). Putts keep their own launch.
+  a high or low launch (tap it to go back to normal). Putts aim at the chains and the drag tips them.
 - **Disc:** tap the bag button (bottom left) for a radial picker of discs with flight numbers.
 - **Throw type:** backhand / forehand toggle (bottom right).
 - **Release angle:** a vertical slider on the right edge, hyzer at the bottom, flat in the middle,
@@ -289,6 +289,10 @@ Two skills to master, power and a straight flick, and both are readable after ev
 Inside **Circle 1 (10 m, 33 ft)** the game switches to putting: the camera drops to eye level on
 the chains, the angle slider hides, and the pull sets a softer power range. Circle 2 (10 to 20 m)
 keeps normal controls but suggests the putter.
+
+A putt aims its soft lob at the middle of the chains, so it tips up toward a basket on a hill and
+down toward one below (hole 6). Dragging up or down tips it higher or lower from there, and the
+ring's power mark moves to match.
 
 ### Desktop
 
