@@ -366,7 +366,8 @@ export function simulateThrow(input: ThrowInput, world: SimWorld, wind?: Wind): 
 
     // Ground.
     const g = world.groundHeight(pos.x, pos.z);
-    if (!inBasket && pos.y <= g + 0.012) {
+    // A sliding disc follows the ground down a slope too, instead of sailing off it level.
+    if (!inBasket && (pos.y <= g + 0.012 || grounded)) {
       pos = v3(pos.x, g + 0.012, pos.z);
       if (!grounded) {
         grounded = true;

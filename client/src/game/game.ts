@@ -221,8 +221,9 @@ export class Game {
 
   /** Where the thrower's feet are: the lie, lifted onto the tee pad when standing on it. */
   private standingAt(): V3 {
+    // Feet on the ground under the lie, whatever height the disc stopped at.
     const lie = this.round.lie;
-    return v3(lie.x, lie.y + teePadLift(this.hole, lie.x, lie.z), lie.z);
+    return v3(lie.x, this.hole.world.groundHeight(lie.x, lie.z) + teePadLift(this.hole, lie.x, lie.z), lie.z);
   }
 
   private shotInput(s: ShotSettings, power: number, seed: number, flickDeg = 0, spin = 1): ThrowInput {

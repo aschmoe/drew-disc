@@ -195,9 +195,16 @@ describe('slopes', () => {
     expect(down).toBeGreaterThan(flat * 1.1);
   });
 
-  it('rests on the ground of a slope', () => {
-    const world = sloped(0.15);
-    const r = throwIt({ discId: 'chain-seeker', power: 0.6, launchDeg: 2 }, world);
-    expect(r.rest.y).toBeCloseTo(world.groundHeight(r.rest.x, r.rest.z), 1);
+  it('rests on the ground of a slope, up or down', () => {
+    for (const rise of [0.15, -0.15]) {
+      const world = sloped(rise);
+      const r = throwIt({ discId: 'chain-seeker', power: 0.6, launchDeg: 2 }, world);
+      expect(r.rest.y - world.groundHeight(r.rest.x, r.rest.z), `rise ${rise}`).toBeLessThan(0.05);
+      // And it slides along the ground the whole way, never floating off a downslope.
+      const landed = r.events.find((e) => e.kind === 'ground')!;
+      for (const s of r.path.filter((p) => p.t > landed.t)) {
+        expect(s.p[1] - world.groundHeight(s.p[0], s.p[2]), `rise ${rise} at t ${s.t.toFixed(2)}`).toBeLessThan(0.05);
+      }
+    }
   });
 });
