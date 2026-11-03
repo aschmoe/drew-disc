@@ -212,6 +212,24 @@ photo and his arrows at the critical trees. Numbers are estimates.
   ground right of the line, the three critical trees, the yard OB, and that a midrange up the
   open ground finishes near the basket while a lofted drive at the basket catches the tree at 55 m.
 
+### Hole 6
+
+From UDisc: **Par 3, 266 ft (~81 m)** along the line to the A pin. The basket is straight north
+of the tee (263 ft as the crow flies); the line runs up a narrow lane to a slight bend about 65 m
+out, then a little left and up to the basket. Traced from a UDisc satellite view (scaled off the
+266 ft line), Alex's tee photo and his arrows at the trees lining the lane. Numbers are estimates.
+
+- **A clear but narrow lane:** grass and a dirt track about 7 to 10 m wide between walls of trees
+  and brush for the first 60 m, with brush pressing in right beside the pad.
+- **The basket is up on a little hill** that starts just after the bend and rises about 2 m. A
+  drive that reaches it stops on the slope; an approach that would run on past the basket on
+  flat ground is held by the hill. Open grass runs west of the basket across the hilltop.
+- **The City of SeaTac maintenance yard** is behind a fence about 20 m east of the tee: out of
+  bounds, beyond the woods.
+- `test/hole6.test.ts` pins the length along UDisc's line, the hill (ground flat at the bend, the
+  basket about 2 m up), the lane's width at disc height, a way through, the yard OB, and that a
+  fairway driver up the lane finishes near the basket while a pulled drive stops in the wall.
+
 ### Hole editor (planned, milestone 6)
 
 A dev-only page (`client/tools/`, like the flight lab: run by `npm run dev`, never built for
@@ -314,7 +332,9 @@ naturally.
   slow). Thick firs are denser than deciduous trees. This is the "tree luck" every disc golfer
   knows.
 - **Ground:** height-field terrain with skip and roll on landing. Rough and brush stop the disc
-  faster than fairway.
+  faster than fairway. On a slope gravity pulls along the ground, so a slide up a hill stops
+  sooner and one down it runs on; a slope gentler than the friction can't start a stopped disc
+  moving again.
 - **Basket:** pole, cage and chain volumes. A disc entering the chains below a speed threshold is
   caught. Faster, it has a growing chance to spit out or blow through. Hitting the cage or the
   band bounces off.
@@ -488,7 +508,8 @@ we ever want it, and the flight lab and unit tests run it headless.
 See `client/public/courses/seatac/holes/01.json` for a full example. In short (MAP frame):
 
 - `tees`, `pins` (with a `default`), `par`, `lengthFt`, `bounds`.
-- `terrain.bumps`: gentle gaussian hills, so elevation is a few numbers rather than a heightmap.
+- `terrain.bumps`: gaussian hills, so elevation is a few numbers rather than a heightmap. Most
+  are gentle (under a meter); hole 6 has a real one, about 2 m, with the basket on top.
 - `surfaces`: polygons, polylines (with a width) or circles of `fairway`, `path`, `rough`,
   `bramble`, `tee`, `green`; later entries win, anything uncovered is `defaultSurface`. Surfaces
   set ground friction.
