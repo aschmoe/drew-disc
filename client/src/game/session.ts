@@ -2,7 +2,7 @@
 // a card after every hole and a round card at the end. Game plays one hole; this decides which
 // one comes next and what the cards say.
 //
-// The course lists a hole file per slot (the slots past hole 4 repeat hole 1 for now). Before each hole the
+// The course lists a hole file per slot (the slots past hole 5 repeat hole 1 for now). Before each hole the
 // session asks boot's `showHole` for that slot, which swaps the scenery when the file changes.
 
 import { loadHoleDef, type CourseDef, type HoleDef } from '../content/hole';

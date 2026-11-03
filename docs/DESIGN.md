@@ -191,6 +191,27 @@ photo and his arrows at the critical trees. Numbers are estimates.
   critical pair and the bend tree, the open patch, and that a drive straight at the basket is
   stopped while one thrown out right finishes near it.
 
+### Hole 5
+
+From UDisc: **Par 3, 296 ft (~90 m)** along the line to the A pin. The basket is straight north
+of the tee (288 ft as the crow flies); the line runs up the open ground to a bend about 67 m out,
+then turns back left. Traced from a UDisc satellite view (scaled off the 296 ft line), Alex's tee
+photo and his arrows at the critical trees. Numbers are estimates.
+
+- **The first portion is open:** a lawn off the tee and up the left, opening into long grass up
+  the right, about 15 m wide, with a tree line along its right edge. A wall of tall shrubs and
+  vines stands right of the pad, and conifers line the far side of the lawn on the left.
+- **The critical trees:** one on the left of the line about 24 m out (with a big pale bush in
+  front of it), one on the left about 55 m out, and a big tree right of the bend that turns the
+  line back left. White-trunked birches stand beyond the lawn.
+- **The basket is in the woods** past the bend, reached down a short lane back to the left, which
+  suits a right-hand backhand thrown up the open ground and left to fade.
+- **The City of SeaTac maintenance yard** is behind a fence about 18 m west of the tee, angling
+  away to the northwest: out of bounds, paved, with white stakes, beyond a strip of woods.
+- `test/hole5.test.ts` pins the length along UDisc's line, a way through at trunk height, the open
+  ground right of the line, the three critical trees, the yard OB, and that a midrange up the
+  open ground finishes near the basket while a lofted drive at the basket catches the tree at 55 m.
+
 ### Hole editor (planned, milestone 6)
 
 A dev-only page (`client/tools/`, like the flight lab: run by `npm run dev`, never built for
