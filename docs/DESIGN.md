@@ -171,6 +171,26 @@ Numbers are estimates.
   side trees, the trunk in the way, the string from the left, and that a low threaded drive gets
   past the bend while a lofted one drops short.
 
+### Hole 4
+
+From UDisc: **Par 3, 297 ft (~90 m)** along the line to the A pin. The basket is straight north
+of the tee (288 ft as the crow flies); the line goes out to the right to a bend about 53 m out,
+then comes back in. Traced from a UDisc satellite view (scaled off the 297 ft line), Alex's tee
+photo and his arrows at the critical trees. Numbers are estimates.
+
+- **Lawn and a dirt track off the tee,** ivy and brush right of the pad, big trunks either side.
+- **The critical trees** block a straight throw at the basket: a pair about 25 m out (the left
+  one right on the straight line, the right one a leaning trunk about 4 m right of UDisc's line)
+  and a big tree inside the bend at about 50 m, so the corner can't be cut.
+- **The shape is out right and back in,** which suits a right-hand backhand's fade: thrown about
+  8 to 14 degrees right of the basket, a drive goes between the pair and curls back in.
+- **Right of the bend the woods open up:** long grass under a few scattered big trees, with no
+  undergrowth. A drive that holds right lands there with a clear look back in.
+- Woods and brush everywhere else; no OB.
+- `test/hole4.test.ts` pins the length along UDisc's line, a way through at trunk height, the
+  critical pair and the bend tree, the open patch, and that a drive straight at the basket is
+  stopped while one thrown out right finishes near it.
+
 ### Hole editor (planned, milestone 6)
 
 A dev-only page (`client/tools/`, like the flight lab: run by `npm run dev`, never built for
