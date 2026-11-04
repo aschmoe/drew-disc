@@ -22,7 +22,7 @@ import { FlightPlayback, makeLine, setLine, THROW_ANIM_SECONDS } from './playbac
 import { Round, type Scorecard } from './round';
 import { formatFeet } from './score';
 import { AIM_LIMIT, HYZER_LIMIT, LAUNCH_DEFAULT, LAUNCH_MAX, LAUNCH_MIN, MAX_POWER, type ShotSettings } from './settings';
-import { autoPuttPower, puttLaunchDeg, releaseFrom } from './shot';
+import { autoPuttPower, puttLaunchDeg, releaseFrom, stanceFor } from './shot';
 
 type Phase = 'aim' | 'flight' | 'holed';
 
@@ -224,21 +224,37 @@ export class Game {
   // --- Shot setup -----------------------------------------------------------
 
   private aimHeading(): number {
-    return this.round.basketHeading() + this.settings.aimOffsetDeg;
+    return this.stanceHeading() + this.settings.aimOffsetDeg;
   }
 
   /** Where the thrower's feet are: the lie, lifted onto the tee pad when standing on it. */
+  /** Heading from where the thrower stands to the basket (the lie's own heading, except when a
+   *  disc right at the pole puts the thrower a step back). */
+  private stanceHeading(): number {
+    const at = this.standingAt();
+    const b = this.hole.world.basket;
+    return dirToHeading(v3(b.x - at.x, 0, b.z - at.z));
+  }
+
+  /** The stance at ground level (no tee pad lift), which the camera frames. */
+  private stanceOnGround(): V3 {
+    const at = this.standingAt();
+    return v3(at.x, this.hole.world.groundHeight(at.x, at.z), at.z);
+  }
+
   private standingAt(): V3 {
-    // Feet on the ground under the lie, whatever height the disc stopped at.
-    const lie = this.round.lie;
-    return v3(lie.x, this.hole.world.groundHeight(lie.x, lie.z) + teePadLift(this.hole, lie.x, lie.z), lie.z);
+    // Feet on the ground under the lie (a step back from the pole if the disc stopped right at
+    // the basket), whatever height the disc stopped at.
+    const tee = this.hole.def.tees[0].pos;
+    const at = stanceFor(this.round.lie, this.hole.world.basket, v3(tee[0], 0, -tee[1]));
+    return v3(at.x, this.hole.world.groundHeight(at.x, at.z) + teePadLift(this.hole, at.x, at.z), at.z);
   }
 
   private shotInput(s: ShotSettings, power: number, seed: number, flickDeg = 0, spin = 1): ThrowInput {
     const putt = this.round.isPutt();
     // The flight starts where the thrower's hand lets go (out to the right of the body), and is
     // aimed from there, so a putt off the right hand still lines up on the basket.
-    const from = releaseFrom(this.standingAt(), this.round.basketHeading() + s.aimOffsetDeg, releasePoint(putt ? 'putt' : s.style));
+    const from = releaseFrom(this.standingAt(), this.stanceHeading() + s.aimOffsetDeg, releasePoint(putt ? 'putt' : s.style));
     const b = this.hole.world.basket;
     const aimDeg = dirToHeading(v3(b.x - from.x, 0, b.z - from.z)) + s.aimOffsetDeg;
     return {
@@ -438,7 +454,7 @@ export class Game {
       this.rig.moveTo(this.rig.chasePose(frame.pos, frame.vel), dt, 3);
       if (frame.done) this.finishFlight();
     } else if (this.lookUntil > this.now) {
-      this.rig.moveTo(this.rig.lookPose(this.round.lie), dt, 2.2);
+      this.rig.moveTo(this.rig.lookPose(this.stanceOnGround()), dt, 2.2);
     } else {
       this.rig.moveTo(this.aimPose(), dt, 4);
     }
@@ -458,7 +474,7 @@ export class Game {
   }
 
   private aimPose() {
-    return this.rig.aimPose(this.round.lie, this.aimHeading(), this.round.isPutt(), this.launchOffset());
+    return this.rig.aimPose(this.stanceOnGround(), this.aimHeading(), this.round.isPutt(), this.launchOffset());
   }
 
   private snapCamera(): void {

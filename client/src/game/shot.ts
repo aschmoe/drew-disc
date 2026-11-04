@@ -57,3 +57,25 @@ export function puttLaunchDeg(from: V3, basket: SimBasket): number {
   const rise = basket.base + CHAIN_MIDDLE - from.y;
   return DEFAULT_LAUNCH_DEG.putt + (Math.atan2(rise, dist) * 180) / Math.PI;
 }
+
+/** Closest the thrower's feet come to the pole, in meters: a putt from a disc that stopped right
+ *  under the basket is taken from a step back, not from inside the cage. */
+export const MIN_STANCE = 1.5;
+
+/**
+ * Where the thrower stands for a lie: on it, unless that is within `MIN_STANCE` of the basket, in
+ * which case straight back from the basket through the lie (or toward `fallback`, the tee, when
+ * the lie is right at the pole). Keeps the lie's height; the caller puts the feet on the ground.
+ */
+export function stanceFor(lie: V3, basket: SimBasket, fallback: V3): V3 {
+  let dx = lie.x - basket.x;
+  let dz = lie.z - basket.z;
+  let d = Math.hypot(dx, dz);
+  if (d >= MIN_STANCE) return lie;
+  if (d < 1e-3) {
+    dx = fallback.x - basket.x;
+    dz = fallback.z - basket.z;
+    d = Math.hypot(dx, dz) || 1;
+  }
+  return v3(basket.x + (dx / d) * MIN_STANCE, lie.y, basket.z + (dz / d) * MIN_STANCE);
+}
