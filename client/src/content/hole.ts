@@ -50,7 +50,8 @@ export interface HoleDef {
   surfaces: SurfaceDef[];
   ob: { label: string; polygon: MapPoint[] }[];
   trees: TreeDef[];
-  treeFields: { kind: TreeKind; polygon: MapPoint[]; spacing: number; seed: number }[];
+  /** Seeded tree fields. `height` and `canopyRadius` ranges override the kind's usual sizes. */
+  treeFields: { kind: TreeKind; polygon: MapPoint[]; spacing: number; seed: number; height?: [number, number]; canopyRadius?: [number, number] }[];
   clearings?: { polygon: MapPoint[] }[];
 }
 
@@ -158,15 +159,16 @@ export function buildHole(def: HoleDef, pinId?: string): Hole {
   // Tree fields: a jittered grid inside the polygon, skipping clearings and OB.
   for (const field of def.treeFields) {
     const rng = createRng(field.seed);
-    const size = SIZE[field.kind];
+    const heights = field.height ?? SIZE[field.kind].height;
+    const canopies = field.canopyRadius ?? SIZE[field.kind].canopy;
     const xs = field.polygon.map((p) => p[0]);
     const ys = field.polygon.map((p) => p[1]);
     for (let gy = Math.min(...ys); gy < Math.max(...ys); gy += field.spacing) {
       for (let gx = Math.min(...xs); gx < Math.max(...xs); gx += field.spacing) {
         const x = gx + rng.range(0.1, 0.9) * field.spacing;
         const y = gy + rng.range(0.1, 0.9) * field.spacing;
-        const height = rng.range(size.height[0], size.height[1]);
-        const canopy = rng.range(size.canopy[0], size.canopy[1]);
+        const height = rng.range(heights[0], heights[1]);
+        const canopy = rng.range(canopies[0], canopies[1]);
         if (!pointInPolygon(x, y, field.polygon) || cleared(x, y) || isOBMap(x, y) || onFurniture(x, y, canopy)) continue;
         place(field.kind, [x, y], height, canopy);
       }

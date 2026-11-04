@@ -147,9 +147,127 @@ and Alex's tee photo, then reshaped from Alex's marked-up map. Numbers are estim
   height, the canopy over the basket, and that a low putter parks it while a lofted drive drops
   short.
 
-**Hole authoring tool.** A dev-only editor page lays the satellite screenshot on the ground plane
-so trees, OB lines and pins can be placed by clicking, then exports the hole JSON. The screenshot
-is used locally only and never committed or shipped (map imagery is copyrighted).
+### Hole 3
+
+From UDisc: **Par 3, 370 ft (~113 m)** along the line to the B pin. The basket is straight north
+of the tee (362 ft as the crow flies); the line kinks left, then jogs right and back. Traced from
+a UDisc satellite view (scaled off the 370 ft line) and Alex's two photos and marked-up map. The
+canopy hides most of the hole from above, so the photos and the markup decide where the trees go.
+Numbers are estimates.
+
+- **A wooded tunnel.** A grass lane about 7 m wide under the trees, with wide dirt and wood chips
+  in front of the tee, and brush along both sides so a miss is in the undergrowth. No OB.
+- **Two big side trees** frame the tee shot about 12 to 15 m out: a thick-trunked conifer on the
+  left and a big conifer on the right with low branches reaching toward the line.
+- **Trees right in the way** from about 22 to 33 m: a pair either side, then a trunk about 2 m
+  left of a straight line at the basket, with a thin tree just right of the line behind it. A low
+  line threads them; a lofted drive catches their crowns and drops short.
+- A clump of big trees on the left from about 38 to 45 m, their crowns over the left of the lane,
+  then trees closing in from the right from 56 to 72 m as the lane bends left.
+- **A string of trees poking in from the left** near the bend, about 78 to 90 m out: low, wide
+  crowns and brush that are hard to get through, so the line jogs right past them and back in to
+  the basket. A drive that fades left ends up behind them.
+- `test/hole3.test.ts` pins the length along UDisc's line, a way through at trunk height, the two
+  side trees, the trunk in the way, the string from the left, and that a low threaded drive gets
+  past the bend while a lofted one drops short.
+
+### Hole 4
+
+From UDisc: **Par 3, 297 ft (~90 m)** along the line to the A pin. The basket is straight north
+of the tee (288 ft as the crow flies); the line goes out to the right to a bend about 53 m out,
+then comes back in. Traced from a UDisc satellite view (scaled off the 297 ft line), Alex's tee
+photo and his arrows at the critical trees. Numbers are estimates.
+
+- **Lawn and a dirt track off the tee,** ivy and brush right of the pad, big trunks either side.
+- **The critical trees** block a straight throw at the basket: a pair about 25 m out (the left
+  one right on the straight line, the right one a leaning trunk about 4 m right of UDisc's line)
+  and a big tree inside the bend at about 50 m, so the corner can't be cut.
+- **The shape is out right and back in,** which suits a right-hand backhand's fade: thrown about
+  8 to 14 degrees right of the basket, a drive goes between the pair and curls back in.
+- **Right of the bend the woods open up:** long grass under a few scattered big trees, with no
+  undergrowth. A drive that holds right lands there with a clear look back in.
+- Woods and brush everywhere else; no OB.
+- `test/hole4.test.ts` pins the length along UDisc's line, a way through at trunk height, the
+  critical pair and the bend tree, the open patch, and that a drive straight at the basket is
+  stopped while one thrown out right finishes near it.
+
+### Hole 5
+
+From UDisc: **Par 3, 296 ft (~90 m)** along the line to the A pin. The basket is straight north
+of the tee (288 ft as the crow flies); the line runs up the open ground to a bend about 67 m out,
+then turns back left. Traced from a UDisc satellite view (scaled off the 296 ft line), Alex's tee
+photo and his arrows at the critical trees. Numbers are estimates.
+
+- **The first portion is open:** a lawn off the tee and up the left, opening into long grass up
+  the right, about 15 m wide, with a tree line along its right edge. A wall of tall shrubs and
+  vines stands right of the pad, and conifers line the far side of the lawn on the left.
+- **The critical trees:** one on the left of the line about 24 m out (with a big pale bush in
+  front of it), one on the left about 55 m out, and a big tree right of the bend that turns the
+  line back left. White-trunked birches stand beyond the lawn.
+- **The basket is in the woods** past the bend, reached down a short lane back to the left, which
+  suits a right-hand backhand thrown up the open ground and left to fade.
+- **The City of SeaTac maintenance yard** is behind a fence about 18 m west of the tee, angling
+  away to the northwest: out of bounds, paved, with white stakes, beyond a strip of woods.
+- `test/hole5.test.ts` pins the length along UDisc's line, a way through at trunk height, the open
+  ground right of the line, the three critical trees, the yard OB, and that a midrange up the
+  open ground finishes near the basket while a lofted drive at the basket catches the tree at 55 m.
+
+### Hole 6
+
+From UDisc: **Par 3, 266 ft (~81 m)** along the line to the A pin. The basket is straight north
+of the tee (263 ft as the crow flies); the line runs up a narrow lane to a slight bend about 65 m
+out, then a little left and up to the basket. Traced from a UDisc satellite view (scaled off the
+266 ft line), Alex's tee photo and his arrows at the trees lining the lane. Numbers are estimates.
+
+- **A clear but narrow lane:** grass and a dirt track about 7 to 10 m wide between walls of trees
+  and brush for the first 60 m, with brush pressing in right beside the pad.
+- **The basket is up on a little hill** that starts just after the bend and rises about 2 m. A
+  drive that reaches it stops on the slope; an approach that would run on past the basket on
+  flat ground is held by the hill. Open grass runs west of the basket across the hilltop.
+- **The City of SeaTac maintenance yard** is behind a fence about 20 m east of the tee: out of
+  bounds, beyond the woods.
+- `test/hole6.test.ts` pins the length along UDisc's line, the hill (ground flat at the bend, the
+  basket about 2 m up), the lane's width at disc height, a way through, the yard OB, and that a
+  fairway driver up the lane finishes near the basket while a pulled drive stops in the wall.
+
+### Hole 7
+
+From UDisc: **Par 3, 375 ft (~114 m)** along the line to the B pin. The basket is straight north
+of the tee (319 ft as the crow flies); the line goes up a meadow to the left to a bend about 75 m
+out, then turns right to the basket. Traced from a UDisc satellite view (scaled off the 375 ft
+line), Alex's tee photo and his outline of the massive bush. Numbers are estimates.
+
+- **A massive bush,** about 40 m across, sits right on the straight line from the tee to the
+  basket: a thicket of bushes about 4 m tall with a few trees standing in it. Anything thrown at
+  the basket dies in it. It's a tree field with its own size range (see the hole format below).
+- **The way round is the open meadow left of it,** about 8 m wide between the bush and the
+  woods, up to the bend; then open grass curls round the top of the bush to the basket. A drive
+  thrown 22 to 26 degrees left of the basket reaches the bend, and an approach goes over the top.
+- Big trunks and birches by the tee (a big red-barked conifer on the left), from Alex's photo.
+- **S 136th St** runs about 20 m beyond the basket: out of bounds, paved.
+- `test/hole7.test.ts` pins the length along UDisc's line, the bush (tall, dense, and across the
+  straight line), a way round it, the street OB, and that a drive at the basket dies in the bush
+  while one up the meadow reaches the bend.
+
+### Hole editor (planned, milestone 6)
+
+A dev-only page (`client/tools/`, like the flight lab: run by `npm run dev`, never built for
+production) for editing a hole without touching JSON:
+
+- **Top-down map** of the hole, with a satellite screenshot as an optional tracing layer underneath.
+  The screenshot stays on the computer and is never committed or shipped (map imagery is
+  copyrighted).
+- **Trees and bushes** drawn as circles: drag to move, drag the edge to resize the canopy, a height
+  field, Delete to remove, and a palette to add a leafy tree, young tree, fir or bush.
+- **Tee and pins** as draggable markers, with the tee-to-pin length shown live in feet.
+- **3D preview** beside the map, using the game's own renderer, so the tee view updates as you
+  edit.
+- **Save** writes `holes/NN.json` back into the project through the dev server, with undo.
+- **Generated woods:** tree fields are edited as areas (move the outline, change the spacing), and
+  a **pin** action turns one generated tree into a hand-placed one, or removes it, so a single tree
+  inside the woods can be moved without moving the rest.
+- **Later, if wanted:** surfaces and OB as editable outlines, and a warning when the line from the
+  tee to the basket is blocked (the check `test/hole2.test.ts` already does).
 
 ## 4. Controls
 
@@ -165,7 +283,7 @@ line, adapted for one thumb.
   9 by default). Low lines stay under branches and come up short; high ones clear a canopy and
   fade more. It is the finer adjustment, so it moves 0.6 times as much per pixel as the aim, and
   a sideways drag barely changes it. The view tilts with it, and a chip on the left edge shows
-  a high or low launch (tap it to go back to normal). Putts keep their own launch.
+  a high or low launch (tap it to go back to normal). Putts aim at the chains and the drag tips them.
 - **Disc:** tap the bag button (bottom left) for a radial picker of discs with flight numbers.
 - **Throw type:** backhand / forehand toggle (bottom right).
 - **Release angle:** a vertical slider on the right edge, hyzer at the bottom, flat in the middle,
@@ -190,6 +308,10 @@ Two skills to master, power and a straight flick, and both are readable after ev
 Inside **Circle 1 (10 m, 33 ft)** the game switches to putting: the camera drops to eye level on
 the chains, the angle slider hides, and the pull sets a softer power range. Circle 2 (10 to 20 m)
 keeps normal controls but suggests the putter.
+
+A putt aims its soft lob at the middle of the chains, so it tips up toward a basket on a hill and
+down toward one below (hole 6). Dragging up or down tips it higher or lower from there, and the
+ring's power mark moves to match.
 
 ### Desktop
 
@@ -233,7 +355,9 @@ naturally.
   slow). Thick firs are denser than deciduous trees. This is the "tree luck" every disc golfer
   knows.
 - **Ground:** height-field terrain with skip and roll on landing. Rough and brush stop the disc
-  faster than fairway.
+  faster than fairway. On a slope gravity pulls along the ground, so a slide up a hill stops
+  sooner and one down it runs on; a slope gentler than the friction can't start a stopped disc
+  moving again.
 - **Basket:** pole, cage and chain volumes. A disc entering the chains below a speed threshold is
   caught. Faster, it has a growing chance to spit out or blow through. Hitting the cage or the
   band bounces off.
@@ -407,14 +531,16 @@ we ever want it, and the flight lab and unit tests run it headless.
 See `client/public/courses/seatac/holes/01.json` for a full example. In short (MAP frame):
 
 - `tees`, `pins` (with a `default`), `par`, `lengthFt`, `bounds`.
-- `terrain.bumps`: gentle gaussian hills, so elevation is a few numbers rather than a heightmap.
+- `terrain.bumps`: gaussian hills, so elevation is a few numbers rather than a heightmap. Most
+  are gentle (under a meter); hole 6 has a real one, about 2 m, with the basket on top.
 - `surfaces`: polygons, polylines (with a width) or circles of `fairway`, `path`, `rough`,
   `bramble`, `tee`, `green`; later entries win, anything uncovered is `defaultSurface`. Surfaces
   set ground friction.
 - `ob`: labeled polygons.
 - `trees`: individually placed trees that matter to play (`leafy`, `young`, `fir`, `bush`).
 - `treeFields`: seeded jittered grids of one kind inside a polygon, for the background forest, so
-  nobody hand-places 400 trees; `clearings` keep them out of the lane.
+  nobody hand-places 400 trees; `clearings` keep them out of the lane. A field can set its own
+  `height` and `canopyRadius` ranges (hole 7's massive bush is a field of 4 m bushes).
 
 Adding a hole = a new JSON file and an entry in `course.json`.
 
@@ -456,7 +582,7 @@ The repo stays public (decided); the link is shared with Drew when it's ready.
 | 3 | Nov 19 | Art pass: terrain, firs, sky and fog, thrower and animations, jets, sound (**built**; all procedural, no asset files) |
 | 4 | Nov 26 | Backend: leaderboards, share cards, results screen (**built**; live once the server setup is re-run with `API_PORT`) |
 | 5 | Dec 3 | Real-time multiplayer rooms |
-| 6 | Dec 10 | Polish, phone testing across devices, bug fixes, freeze. **Send the link Dec 11.** |
+| 6 | Dec 10 | Polish, phone testing across devices, bug fixes, freeze. **Send the link Dec 11.** Before the push on more real holes: the **hole editor** (a dev tool, see [Hole editor](#hole-editor-planned-milestone-6)) |
 
 If anything slips, multiplayer is the flex item; the single-player hole with leaderboards stands
 on its own.

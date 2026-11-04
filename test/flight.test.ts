@@ -172,3 +172,39 @@ describe('collisions', () => {
     expect(r.lastInBounds.z).toBeGreaterThanOrEqual(-40.5);
   });
 });
+
+describe('slopes', () => {
+  // A plane rising 15% to the north (uphill when throwing north), or falling the same.
+  const sloped = (rise: number) => ({ ...flatWorld(), groundHeight: (_x: number, z: number) => rise * -z });
+  // How far a slide runs for its speed: d / v^2 is 1 / (2 * deceleration), so it compares the
+  // ground's pull without caring how fast each throw happened to land.
+  const slide = (rise: number) => {
+    const r = throwIt({ discId: 'chain-seeker', power: 0.6, launchDeg: 2, from: { x: 0, y: 1.1, z: 0 } }, sloped(rise));
+    const landed = r.events.find((e) => e.kind === 'ground')!;
+    const i = r.path.findIndex((s) => s.t >= landed.t + 0.05);
+    const [a, b] = [r.path[i], r.path[i + 1]];
+    const v = Math.hypot(b.p[0] - a.p[0], b.p[2] - a.p[2]) / (b.t - a.t);
+    return Math.hypot(r.rest.x - a.p[0], r.rest.z - a.p[2]) / (v * v);
+  };
+
+  it('stops a slide sooner uphill and lets it run on downhill', () => {
+    const up = slide(0.15);
+    const flat = slide(0);
+    const down = slide(-0.15);
+    expect(up).toBeLessThan(flat * 0.9);
+    expect(down).toBeGreaterThan(flat * 1.1);
+  });
+
+  it('rests on the ground of a slope, up or down', () => {
+    for (const rise of [0.15, -0.15]) {
+      const world = sloped(rise);
+      const r = throwIt({ discId: 'chain-seeker', power: 0.6, launchDeg: 2 }, world);
+      expect(r.rest.y - world.groundHeight(r.rest.x, r.rest.z), `rise ${rise}`).toBeLessThan(0.05);
+      // And it slides along the ground the whole way, never floating off a downslope.
+      const landed = r.events.find((e) => e.kind === 'ground')!;
+      for (const s of r.path.filter((p) => p.t > landed.t)) {
+        expect(s.p[1] - world.groundHeight(s.p[0], s.p[2]), `rise ${rise} at t ${s.t.toFixed(2)}`).toBeLessThan(0.05);
+      }
+    }
+  });
+});

@@ -22,7 +22,7 @@ import { FlightPlayback, makeLine, setLine, THROW_ANIM_SECONDS } from './playbac
 import { Round, type Scorecard } from './round';
 import { formatFeet } from './score';
 import { AIM_LIMIT, HYZER_LIMIT, LAUNCH_DEFAULT, LAUNCH_MAX, LAUNCH_MIN, MAX_POWER, type ShotSettings } from './settings';
-import { autoPuttPower, releaseFrom } from './shot';
+import { autoPuttPower, puttLaunchDeg, releaseFrom, stanceFor } from './shot';
 
 type Phase = 'aim' | 'flight' | 'holed';
 
@@ -47,6 +47,8 @@ export class Game {
   private pullPower: number | null = null;
   private previewDirty = true;
   private puttTarget: number | null = null;
+  /** The launch setting the putt power mark was worked out for. */
+  private puttTargetLaunch: number = LAUNCH_DEFAULT;
   private followClock = -1;
   private lookUntil = 0;
   private now = 0;
@@ -106,8 +108,8 @@ export class Game {
       aimBy: (aim, launch) =>
         this.update({
           aimOffsetDeg: this.settings.aimOffsetDeg + aim,
-          // A putt keeps its own soft launch, as it keeps a flat release.
-          launchDeg: this.settings.launchDeg + (this.round.isPutt() ? 0 : launch),
+          // Putts too: the drag tips a putt up or down from its automatic aim at the chains.
+          launchDeg: this.settings.launchDeg + launch,
         }),
     }, canvas);
     this.keyboard = new Keyboard({
@@ -207,6 +209,12 @@ export class Game {
     s.hyzerDeg = Math.max(-HYZER_LIMIT, Math.min(HYZER_LIMIT, s.hyzerDeg));
     s.launchDeg = Math.max(LAUNCH_MIN, Math.min(LAUNCH_MAX, s.launchDeg));
     s.power = Math.max(0, Math.min(MAX_POWER, s.power));
+    // A putt tipped up or down needs a different power to reach the chains: move the ring's mark.
+    if (this.phase === 'aim' && this.round.isPutt() && s.launchDeg !== this.puttTargetLaunch) {
+      this.puttTargetLaunch = s.launchDeg;
+      this.puttTarget = this.autoPuttPower('chain-seeker');
+      this.controls.setPutting(true, this.puttTarget);
+    }
     this.controls.render();
     this.debug?.render();
     this.previewDirty = true;
@@ -216,20 +224,37 @@ export class Game {
   // --- Shot setup -----------------------------------------------------------
 
   private aimHeading(): number {
-    return this.round.basketHeading() + this.settings.aimOffsetDeg;
+    return this.stanceHeading() + this.settings.aimOffsetDeg;
   }
 
   /** Where the thrower's feet are: the lie, lifted onto the tee pad when standing on it. */
+  /** Heading from where the thrower stands to the basket (the lie's own heading, except when a
+   *  disc right at the pole puts the thrower a step back). */
+  private stanceHeading(): number {
+    const at = this.standingAt();
+    const b = this.hole.world.basket;
+    return dirToHeading(v3(b.x - at.x, 0, b.z - at.z));
+  }
+
+  /** The stance at ground level (no tee pad lift), which the camera frames. */
+  private stanceOnGround(): V3 {
+    const at = this.standingAt();
+    return v3(at.x, this.hole.world.groundHeight(at.x, at.z), at.z);
+  }
+
   private standingAt(): V3 {
-    const lie = this.round.lie;
-    return v3(lie.x, lie.y + teePadLift(this.hole, lie.x, lie.z), lie.z);
+    // Feet on the ground under the lie (a step back from the pole if the disc stopped right at
+    // the basket), whatever height the disc stopped at.
+    const tee = this.hole.def.tees[0].pos;
+    const at = stanceFor(this.round.lie, this.hole.world.basket, v3(tee[0], 0, -tee[1]));
+    return v3(at.x, this.hole.world.groundHeight(at.x, at.z) + teePadLift(this.hole, at.x, at.z), at.z);
   }
 
   private shotInput(s: ShotSettings, power: number, seed: number, flickDeg = 0, spin = 1): ThrowInput {
     const putt = this.round.isPutt();
     // The flight starts where the thrower's hand lets go (out to the right of the body), and is
     // aimed from there, so a putt off the right hand still lines up on the basket.
-    const from = releaseFrom(this.standingAt(), this.round.basketHeading() + s.aimOffsetDeg, releasePoint(putt ? 'putt' : s.style));
+    const from = releaseFrom(this.standingAt(), this.stanceHeading() + s.aimOffsetDeg, releasePoint(putt ? 'putt' : s.style));
     const b = this.hole.world.basket;
     const aimDeg = dirToHeading(v3(b.x - from.x, 0, b.z - from.z)) + s.aimOffsetDeg;
     return {
@@ -240,7 +265,8 @@ export class Game {
       power,
       aimDeg,
       hyzerDeg: putt ? 0 : s.hyzerDeg,
-      launchDeg: putt ? undefined : s.launchDeg,
+      // A putt aims its soft lob at the chains, uphill or down; the launch setting tips it from there.
+      launchDeg: putt ? puttLaunchDeg(from, b) + (s.launchDeg - LAUNCH_DEFAULT) : s.launchDeg,
       flickDeg,
       spin,
       from,
@@ -254,6 +280,8 @@ export class Game {
     const putt = this.round.isPutt();
     if (putt) {
       this.settings.discId = 'chain-seeker';
+      this.settings.launchDeg = LAUNCH_DEFAULT;
+      this.puttTargetLaunch = LAUNCH_DEFAULT;
       this.puttTarget = this.autoPuttPower('chain-seeker');
       this.settings.power = this.puttTarget;
     } else {
@@ -426,7 +454,7 @@ export class Game {
       this.rig.moveTo(this.rig.chasePose(frame.pos, frame.vel), dt, 3);
       if (frame.done) this.finishFlight();
     } else if (this.lookUntil > this.now) {
-      this.rig.moveTo(this.rig.lookPose(this.round.lie), dt, 2.2);
+      this.rig.moveTo(this.rig.lookPose(this.stanceOnGround()), dt, 2.2);
     } else {
       this.rig.moveTo(this.aimPose(), dt, 4);
     }
@@ -446,7 +474,7 @@ export class Game {
   }
 
   private aimPose() {
-    return this.rig.aimPose(this.round.lie, this.aimHeading(), this.round.isPutt(), this.launchOffset());
+    return this.rig.aimPose(this.stanceOnGround(), this.aimHeading(), this.round.isPutt(), this.launchOffset());
   }
 
   private snapCamera(): void {

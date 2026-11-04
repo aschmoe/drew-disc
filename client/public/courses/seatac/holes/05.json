@@ -1,0 +1,80 @@
+{
+  "id": "seatac-05",
+  "number": 5,
+  "name": "Hole 5",
+  "par": 3,
+  "lengthFt": 296,
+  "_notes": [
+    "MAP frame: meters, x = east, y = north. Tee at the origin, throwing north.",
+    "Traced from a UDisc satellite view (scaled off the 296 ft line to the A pin), Alex's tee photo and his arrows at the critical trees. Estimates; see docs/DESIGN.md section 3.",
+    "The feature: the first two thirds are open, a lawn off the tee and long grass up the right, with two trees standing on the left of the line at 24 and 55 m. At the bend a big tree on the right turns the line left, into the woods round the basket.",
+    "The City of SeaTac maintenance yard is behind a fence about 18 m west of the tee and angles away to the northwest: out of bounds.",
+    "Surfaces: later entries win. Anything not covered is defaultSurface."
+  ],
+  "bounds": { "minX": -34, "maxX": 36, "minY": -12, "maxY": 112 },
+  "defaultSurface": "rough",
+  "terrain": {
+    "bumps": [
+      { "pos": [6, 52], "radius": 18, "height": 0.9 },
+      { "pos": [-12, 30], "radius": 14, "height": 0.4 },
+      { "pos": [-4, 96], "radius": 14, "height": 0.4 }
+    ]
+  },
+  "tees": [
+    { "id": "main", "pos": [0, 0], "headingDeg": 8 }
+  ],
+  "pins": [
+    { "id": "A", "pos": [0, 87.8], "default": true }
+  ],
+  "surfaces": [
+    { "kind": "fairway", "_note": "the open first portion: lawn off the tee and up the left, opening out to the right", "polygon": [[-3, -3], [3, -3], [4, 4], [10, 9], [15.5, 17], [16.5, 32], [15.5, 50], [12.5, 61], [8, 63], [4, 56], [1.5, 46], [-1, 34], [-5, 28], [-10.5, 21], [-11.5, 9], [-8, 2]] },
+    { "kind": "fairway", "_note": "the lane back left to the basket", "polyline": [[9, 64], [4.5, 76], [0, 86]], "width": 5.5 },
+    { "kind": "path", "_note": "worn dirt track from the tee", "polyline": [[0, 0], [1.6, 12], [4.4, 33], [8.6, 64], [0.6, 85.5]], "width": 1.3 },
+    { "kind": "path", "_note": "dirt in front of the pad", "polygon": [[-2.2, -2], [2.2, -2], [2.8, 5], [-2.4, 5]] },
+    { "kind": "green", "circle": { "pos": [0, 87.8], "radius": 4.5 } },
+    { "kind": "tee", "polygon": [[-0.9, -3.6], [0.9, -3.6], [0.9, 0.6], [-0.9, 0.6]] }
+  ],
+  "ob": [
+    { "label": "Maintenance yard", "polygon": [[-17.5, 27.4], [-60, 9.8], [-60, 130], [-48.5, 130]] }
+  ],
+  "trees": [
+    { "kind": "bush", "pos": [4.3, 0.8], "height": 1.9, "canopyRadius": 1.5, "_note": "a wall of tall shrubs and vines right of the tee" },
+    { "kind": "bush", "pos": [4.8, 3.6], "height": 2.1, "canopyRadius": 1.6 },
+    { "kind": "bush", "pos": [5.6, 6.4], "height": 2, "canopyRadius": 1.6 },
+    { "kind": "bush", "pos": [6.9, 9], "height": 1.8, "canopyRadius": 1.5 },
+    { "kind": "young", "pos": [7, 3.8], "height": 9, "canopyRadius": 2.4 },
+    { "kind": "young", "pos": [8.6, 8.2], "height": 8, "canopyRadius": 2.2 },
+    { "kind": "fir", "pos": [-13, 6], "height": 26, "canopyRadius": 3.6, "_note": "conifers along the far side of the lawn on the left" },
+    { "kind": "fir", "pos": [-14, 15.5], "height": 28, "canopyRadius": 3.8 },
+
+    { "kind": "leafy", "pos": [-2, 24], "height": 15, "canopyRadius": 4.4, "_note": "critical: the first tree on the left of the line, about 24 m out" },
+    { "kind": "bush", "pos": [-0.6, 21.4], "height": 1.8, "canopyRadius": 1.6, "_note": "the big pale bush in front of it" },
+    { "kind": "leafy", "pos": [1.5, 55.5], "height": 17, "canopyRadius": 4.6, "_note": "critical: the second tree on the left of the line, about 55 m out" },
+    { "kind": "bush", "pos": [-1, 52], "height": 1.6, "canopyRadius": 1.4 },
+    { "kind": "young", "pos": [-2.5, 60], "height": 10, "canopyRadius": 2.2, "_note": "the white-trunked birches beyond the lawn" },
+    { "kind": "young", "pos": [0.2, 64.5], "height": 11, "canopyRadius": 2.2 },
+    { "kind": "young", "pos": [-5, 56], "height": 10, "canopyRadius": 2 },
+    { "kind": "leafy", "pos": [12.8, 68], "height": 18, "canopyRadius": 4.8, "_note": "critical: the big tree right of the bend that turns the line back left" },
+
+    { "kind": "young", "pos": [18.5, 26], "height": 9, "canopyRadius": 2.4, "_note": "the tree line along the right of the open grass" },
+    { "kind": "young", "pos": [18.8, 44], "height": 9, "canopyRadius": 2.4 },
+    { "kind": "leafy", "pos": [-3.4, 74], "height": 17, "canopyRadius": 4, "_note": "the woods round the basket" },
+    { "kind": "leafy", "pos": [12, 78.5], "height": 17, "canopyRadius": 4.6 },
+    { "kind": "young", "pos": [6.6, 82], "height": 8, "canopyRadius": 2 },
+    { "kind": "leafy", "pos": [-5.8, 90], "height": 18, "canopyRadius": 4.2 },
+    { "kind": "leafy", "pos": [5.6, 94], "height": 19, "canopyRadius": 4.6 },
+    { "kind": "leafy", "pos": [-1, 99], "height": 18, "canopyRadius": 4.4 },
+    { "kind": "bush", "pos": [4.4, 86.5], "height": 1.5, "canopyRadius": 1.4 },
+    { "kind": "bush", "pos": [-4.4, 84], "height": 1.4, "canopyRadius": 1.3 }
+  ],
+  "treeFields": [
+    { "kind": "leafy", "_note": "woods round the open ground; the clearing below carves it out, and nothing grows in the yard", "spacing": 7.5, "seed": 511, "polygon": [[-34, -12], [36, -12], [36, 112], [-34, 112]] },
+    { "kind": "fir", "spacing": 13, "seed": 512, "polygon": [[-34, -12], [36, -12], [36, 112], [-34, 112]] },
+    { "kind": "young", "_note": "understory", "spacing": 8, "seed": 513, "polygon": [[-34, -12], [36, -12], [36, 112], [-34, 112]] },
+    { "kind": "young", "_note": "deeper understory behind the basket, to stop a long miss", "spacing": 5, "seed": 515, "polygon": [[-16, 98], [16, 98], [16, 112], [-16, 112]] },
+    { "kind": "bush", "_note": "brush at the edges of the open ground and round the basket", "spacing": 2.8, "seed": 514, "polygon": [[-17, -6], [22, -6], [22, 104], [-17, 104]] }
+  ],
+  "clearings": [
+    { "_note": "the tee lawn, the open grass up the right, and the lane back left to the basket", "polygon": [[-5, -6], [4, -6], [6, 2], [12, 8], [17, 16], [18.5, 30], [18, 48], [16, 60], [11, 63], [11, 74], [7, 84], [6.5, 95], [-6.5, 95], [-6, 86], [-1, 76], [3, 68], [2, 61], [-3, 50], [-5, 38], [-7, 28], [-12, 20], [-12.5, 8], [-9, 0]] }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "id": "seatac-07",
+  "number": 7,
+  "name": "Hole 7",
+  "par": 3,
+  "lengthFt": 375,
+  "_notes": [
+    "MAP frame: meters, x = east, y = north. Tee at the origin, throwing north.",
+    "Traced from a UDisc satellite view (scaled off the 375 ft line to the B pin), Alex's tee photo and his outline of the massive bush. Estimates; see docs/DESIGN.md section 3.",
+    "The feature: a dogleg left around a massive bush, about 45 m across, that sits on the straight line from the tee to the basket. The line goes up the open meadow left of it to a bend about 75 m out, then turns right over the top of it to the basket.",
+    "S 136th St runs about 20 m beyond the basket: out of bounds.",
+    "Surfaces: later entries win. Anything not covered is defaultSurface."
+  ],
+  "bounds": { "minX": -48, "maxX": 40, "minY": -12, "maxY": 128 },
+  "defaultSurface": "rough",
+  "terrain": {
+    "bumps": [
+      { "pos": [2, 64], "radius": 18, "height": 0.8 },
+      { "pos": [-30, 30], "radius": 14, "height": 0.4 },
+      { "pos": [-14, 94], "radius": 16, "height": 0.5 }
+    ]
+  },
+  "tees": [
+    { "id": "main", "pos": [0, 0], "headingDeg": -21 }
+  ],
+  "pins": [
+    { "id": "B", "pos": [0, 97.1], "default": true }
+  ],
+  "surfaces": [
+    { "kind": "fairway", "_note": "the open meadow up the left of the bush", "polyline": [[0, 6], [-13, 38], [-26, 68]], "width": 11 },
+    { "kind": "fairway", "_note": "the open grass beyond the bend, round the top of the bush to the basket", "polygon": [[-35, 62], [-22, 62], [-20, 70], [-13, 79], [-1, 86], [6, 88], [9, 96], [6, 106], [-12, 108], [-32, 99], [-36, 80]] },
+    { "kind": "path", "_note": "the dirt track from the tee", "polyline": [[0, 0], [-10, 26], [-25, 66], [-26.5, 71.5], [-1, 95.5]], "width": 1.3 },
+    { "kind": "path", "_note": "wide dirt in front of the pad", "polygon": [[-3, -2], [3, -2], [2.5, 7], [-4, 7]] },
+    { "kind": "green", "circle": { "pos": [0, 97.1], "radius": 4.5 } },
+    { "kind": "tee", "polygon": [[-0.9, -3.6], [0.9, -3.6], [0.9, 0.6], [-0.9, 0.6]] }
+  ],
+  "ob": [
+    { "label": "Street", "polygon": [[-60, 109.2], [60, 134.4], [60, 170], [-60, 170]] }
+  ],
+  "trees": [
+    { "kind": "fir", "pos": [-5.6, 5], "height": 30, "canopyRadius": 3.8, "_note": "the big red-barked trunk left of the tee" },
+    { "kind": "young", "pos": [-9, 10], "height": 12, "canopyRadius": 2.2, "_note": "birches and conifers on the left" },
+    { "kind": "fir", "pos": [-12, 18], "height": 24, "canopyRadius": 3.4 },
+    { "kind": "young", "pos": [-15, 9], "height": 11, "canopyRadius": 2 },
+    { "kind": "leafy", "pos": [5.2, 7], "height": 16, "canopyRadius": 4, "_note": "trees close on the right of the tee" },
+    { "kind": "fir", "pos": [7.6, 15], "height": 26, "canopyRadius": 3.6 },
+
+    { "kind": "leafy", "pos": [-4, 52], "height": 15, "canopyRadius": 5, "_note": "trees standing in the massive bush" },
+    { "kind": "leafy", "pos": [6, 60], "height": 16, "canopyRadius": 5 },
+    { "kind": "leafy", "pos": [-10, 66], "height": 15, "canopyRadius": 4.6 },
+    { "kind": "leafy", "pos": [12, 70], "height": 16, "canopyRadius": 4.8 },
+    { "kind": "leafy", "pos": [2, 76], "height": 14, "canopyRadius": 4.4 },
+
+    { "kind": "young", "pos": [-34, 74], "height": 9, "canopyRadius": 2.4, "_note": "the edge of the woods beyond the bend" },
+    { "kind": "leafy", "pos": [-36, 88], "height": 17, "canopyRadius": 4.6 },
+    { "kind": "leafy", "pos": [-7.6, 101], "height": 16, "canopyRadius": 4.4, "_note": "the tree just left of the basket" },
+    { "kind": "young", "pos": [8.4, 100], "height": 9, "canopyRadius": 2.2 },
+    { "kind": "leafy", "pos": [3, 113], "height": 14, "canopyRadius": 4.2, "_note": "trees along the verge before the street" },
+    { "kind": "leafy", "pos": [-14, 110], "height": 13, "canopyRadius": 4 },
+    { "kind": "bush", "pos": [5.4, 92], "height": 1.5, "canopyRadius": 1.4 }
+  ],
+  "treeFields": [
+    { "kind": "bush", "_note": "the massive bush: a thicket of tall bushes about 4 m high, right on the straight line at the basket", "spacing": 3.6, "seed": 716, "height": [3.4, 4.8], "canopyRadius": [2.4, 3.2], "polygon": [[-17.8, 58.9], [-16.8, 67], [-10.8, 74], [-1, 81], [5.9, 80.5], [15.3, 76.5], [21, 69.4], [19, 58.9], [14, 51.5], [5.9, 49.5], [-5.9, 47.4], [-12.6, 48.6], [-16.8, 52.4]], "_outline": "Alex's outline, pulled in about 3 m so the bushes' crowns, not their centres, reach it" },
+    { "kind": "leafy", "_note": "woods round the meadow; the clearing below keeps them off the open ground", "spacing": 7.5, "seed": 711, "polygon": [[-48, -12], [40, -12], [40, 128], [-48, 128]] },
+    { "kind": "fir", "spacing": 13, "seed": 712, "polygon": [[-48, -12], [40, -12], [40, 128], [-48, 128]] },
+    { "kind": "young", "_note": "understory", "spacing": 8, "seed": 713, "polygon": [[-48, -12], [40, -12], [40, 128], [-48, 128]] },
+    { "kind": "bush", "_note": "brush at the edges of the open ground", "spacing": 2.8, "seed": 714, "polygon": [[-42, -6], [12, -6], [12, 112], [-42, 112]] }
+  ],
+  "clearings": [
+    { "_note": "the tee, the meadow left of the bush, the grass beyond the bend and the basket", "polygon": [[-4.5, -5], [4, -5], [3, 14], [-2, 30], [-6, 44], [-13, 46.5], [-18, 51], [-19, 59], [-18, 68], [-11.5, 76], [-1, 83], [6.5, 83.5], [10, 96], [8, 107], [-12, 109], [-31, 100], [-35, 86], [-34, 68], [-31, 55], [-22, 35], [-12, 18], [-7, 8]] }
+  ]
+}

@@ -312,6 +312,13 @@ export function simulateThrow(input: ThrowInput, world: SimWorld, wind?: Wind): 
     } else {
       // Sliding on the ground: friction by surface, then stop.
       const mu = SURFACE_FRICTION[world.surfaceAt(pos.x, pos.z)];
+      // On a slope gravity pulls along the ground: uphill slides stop sooner, downhill ones run
+      // on. A slope gentler than the friction can't start a stopped disc moving again.
+      const e = 0.25;
+      const gx = (world.groundHeight(pos.x + e, pos.z) - world.groundHeight(pos.x - e, pos.z)) / (2 * e);
+      const gz = (world.groundHeight(pos.x, pos.z + e) - world.groundHeight(pos.x, pos.z - e)) / (2 * e);
+      const pull = (G * DT) / (1 + gx * gx + gz * gz);
+      vel = v3(vel.x - gx * pull, 0, vel.z - gz * pull);
       const h = Math.hypot(vel.x, vel.z);
       const decel = mu * G * DT;
       const k = h > decel ? (h - decel) / h : 0;
@@ -359,7 +366,8 @@ export function simulateThrow(input: ThrowInput, world: SimWorld, wind?: Wind): 
 
     // Ground.
     const g = world.groundHeight(pos.x, pos.z);
-    if (!inBasket && pos.y <= g + 0.012) {
+    // A sliding disc follows the ground down a slope too, instead of sailing off it level.
+    if (!inBasket && (pos.y <= g + 0.012 || grounded)) {
       pos = v3(pos.x, g + 0.012, pos.z);
       if (!grounded) {
         grounded = true;

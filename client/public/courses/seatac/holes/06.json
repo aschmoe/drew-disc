@@ -1,0 +1,78 @@
+{
+  "id": "seatac-06",
+  "number": 6,
+  "name": "Hole 6",
+  "par": 3,
+  "lengthFt": 266,
+  "_notes": [
+    "MAP frame: meters, x = east, y = north. Tee at the origin, throwing north.",
+    "Traced from a UDisc satellite view (scaled off the 266 ft line to the A pin), Alex's tee photo and his arrows at the trees lining the lane. Estimates; see docs/DESIGN.md section 3.",
+    "The feature: a clear but narrow lane, walled by trees and brush on both sides for the first 60 m, then a little hill that starts just after the bend, with the basket up on it.",
+    "The City of SeaTac maintenance yard is behind a fence about 20 m east of the tee: out of bounds.",
+    "Surfaces: later entries win. Anything not covered is defaultSurface."
+  ],
+  "bounds": { "minX": -30, "maxX": 30, "minY": -12, "maxY": 110 },
+  "defaultSurface": "rough",
+  "terrain": {
+    "bumps": [
+      { "pos": [-2, 84], "radius": 13, "height": 2.6, "_note": "the little hill the basket sits on: it starts just after the bend and rises about 2 m" },
+      { "pos": [-16, 30], "radius": 14, "height": 0.5 }
+    ]
+  },
+  "tees": [
+    { "id": "main", "pos": [0, 0], "headingDeg": 4 }
+  ],
+  "pins": [
+    { "id": "A", "pos": [0, 80.3], "default": true }
+  ],
+  "surfaces": [
+    { "kind": "fairway", "_note": "the narrow grass lane, then up the hill", "polyline": [[0, 4], [4.5, 65.3], [0, 80.3]], "width": 7 },
+    { "kind": "fairway", "_note": "open grass on top of the hill, west of the basket", "polygon": [[-18, 70], [-3, 69], [3, 72], [6, 80], [5, 90], [-18, 95]] },
+    { "kind": "path", "_note": "worn dirt track from the tee", "polyline": [[0, 0], [1.5, 22], [4.2, 64], [0.6, 78.5]], "width": 1.3 },
+    { "kind": "path", "_note": "dirt in front of the pad", "polygon": [[-2.4, -2], [2.4, -2], [3, 6], [-2.6, 6]] },
+    { "kind": "green", "circle": { "pos": [0, 80.3], "radius": 4.5 } },
+    { "kind": "tee", "polygon": [[-0.9, -3.6], [0.9, -3.6], [0.9, 0.6], [-0.9, 0.6]] }
+  ],
+  "ob": [
+    { "label": "Maintenance yard", "polygon": [[21, 5], [60, 72], [60, -15.6]] }
+  ],
+  "trees": [
+    { "kind": "bush", "pos": [-5, 3], "height": 2, "canopyRadius": 1.5, "_note": "a wall of brush close on the left of the tee" },
+    { "kind": "bush", "pos": [-4.9, 6], "height": 2.1, "canopyRadius": 1.5 },
+    { "kind": "bush", "pos": [-5.4, 13], "height": 1.9, "canopyRadius": 1.5 },
+    { "kind": "young", "pos": [-6.6, 8], "height": 9, "canopyRadius": 2.6 },
+    { "kind": "bush", "pos": [4.2, 2.2], "height": 1.8, "canopyRadius": 1.5, "_note": "and on the right" },
+    { "kind": "bush", "pos": [4.6, 5.6], "height": 1.9, "canopyRadius": 1.5 },
+    { "kind": "bush", "pos": [5.1, 9.2], "height": 1.7, "canopyRadius": 1.4 },
+    { "kind": "young", "pos": [6.6, 12], "height": 9, "canopyRadius": 2.4 },
+
+    { "kind": "leafy", "pos": [-5.6, 10.5], "height": 15, "canopyRadius": 3.8, "_note": "trees lining the left of the lane (Alex's arrows)" },
+    { "kind": "leafy", "pos": [-6.4, 27.4], "height": 16, "canopyRadius": 4 },
+    { "kind": "young", "pos": [-4.6, 39.5], "height": 10, "canopyRadius": 2.4 },
+    { "kind": "leafy", "pos": [-1.2, 62], "height": 16, "canopyRadius": 3.8 },
+    { "kind": "young", "pos": [-3.2, 50], "height": 9, "canopyRadius": 2.2 },
+    { "kind": "young", "pos": [6.4, 30.5], "height": 10, "canopyRadius": 2.4, "_note": "and the right (Alex's arrows)" },
+    { "kind": "leafy", "pos": [7, 45], "height": 16, "canopyRadius": 3.8 },
+    { "kind": "leafy", "pos": [10.4, 55.8], "height": 17, "canopyRadius": 4.2 },
+    { "kind": "young", "pos": [5.8, 20], "height": 9, "canopyRadius": 2.2 },
+    { "kind": "young", "pos": [-1.8, 36], "height": 12, "canopyRadius": 1.8, "_note": "a tall bare trunk standing just inside the left edge" },
+
+    { "kind": "leafy", "pos": [8.4, 70], "height": 17, "canopyRadius": 4.2, "_note": "trees on the right of the hill" },
+    { "kind": "leafy", "pos": [6.6, 79], "height": 18, "canopyRadius": 4 },
+    { "kind": "leafy", "pos": [5.4, 91], "height": 19, "canopyRadius": 4.4 },
+    { "kind": "fir", "pos": [-4, 98], "height": 26, "canopyRadius": 3.6, "_note": "woods behind the basket" },
+    { "kind": "young", "pos": [-11, 84], "height": 8, "canopyRadius": 2.2, "_note": "a few trees on the open hilltop" },
+    { "kind": "young", "pos": [-7, 74], "height": 9, "canopyRadius": 2 },
+    { "kind": "bush", "pos": [3.2, 86], "height": 1.5, "canopyRadius": 1.4 }
+  ],
+  "treeFields": [
+    { "kind": "leafy", "_note": "woods round the lane and the hill; the clearing below carves them out", "spacing": 7.5, "seed": 611, "polygon": [[-30, -12], [30, -12], [30, 110], [-30, 110]] },
+    { "kind": "fir", "spacing": 13, "seed": 612, "polygon": [[-30, -12], [30, -12], [30, 110], [-30, 110]] },
+    { "kind": "young", "_note": "understory", "spacing": 8, "seed": 613, "polygon": [[-30, -12], [30, -12], [30, 110], [-30, 110]] },
+    { "kind": "young", "_note": "deeper understory behind the basket, to stop a long miss", "spacing": 5, "seed": 615, "polygon": [[-14, 97], [14, 97], [14, 110], [-14, 110]] },
+    { "kind": "bush", "_note": "brush walling both sides of the lane", "spacing": 2.6, "seed": 614, "polygon": [[-12, -6], [14, -6], [14, 74], [-12, 74]] }
+  ],
+  "clearings": [
+    { "_note": "the narrow lane, then the hill and the open grass west of the basket", "polygon": [[-4.2, -5], [4.2, -5], [4.2, 10], [4.6, 25], [5.2, 40], [6.6, 55], [8, 64], [6.4, 73], [4.4, 84], [3, 92], [-18, 97], [-20, 72], [-3.4, 67], [-2.2, 55], [-2.8, 40], [-3.6, 25], [-3.8, 10]] }
+  ]
+}
