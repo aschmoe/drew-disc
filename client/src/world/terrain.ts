@@ -24,7 +24,7 @@ export function buildGround(hole: Hole): THREE.Mesh {
   const surfaceColor = (mx: number, my: number) => {
     const ob = hole.def.ob.find((o) => pointInPolygon(mx, my, o.polygon));
     // The road is two lanes wide; the rest of that OB strip is verge. A yard is paved.
-    if (ob) return (ob.label === 'Road' && my > roadTop - 15) || ob.label === 'Maintenance yard' ? COLORS.asphalt : COLORS.obLawn;
+    if (ob) return (ob.label === 'Road' && my > roadTop - 15) || ob.label === 'Maintenance yard' || ob.label === 'Street' ? COLORS.asphalt : COLORS.obLawn;
     return SURFACE_COLOR[hole.world.surfaceAt(mx, -my)];
   };
 

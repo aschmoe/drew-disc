@@ -230,6 +230,25 @@ out, then a little left and up to the basket. Traced from a UDisc satellite view
   basket about 2 m up), the lane's width at disc height, a way through, the yard OB, and that a
   fairway driver up the lane finishes near the basket while a pulled drive stops in the wall.
 
+### Hole 7
+
+From UDisc: **Par 3, 375 ft (~114 m)** along the line to the B pin. The basket is straight north
+of the tee (319 ft as the crow flies); the line goes up a meadow to the left to a bend about 75 m
+out, then turns right to the basket. Traced from a UDisc satellite view (scaled off the 375 ft
+line), Alex's tee photo and his outline of the massive bush. Numbers are estimates.
+
+- **A massive bush,** about 40 m across, sits right on the straight line from the tee to the
+  basket: a thicket of bushes about 4 m tall with a few trees standing in it. Anything thrown at
+  the basket dies in it. It's a tree field with its own size range (see the hole format below).
+- **The way round is the open meadow left of it,** about 8 m wide between the bush and the
+  woods, up to the bend; then open grass curls round the top of the bush to the basket. A drive
+  thrown 22 to 26 degrees left of the basket reaches the bend, and an approach goes over the top.
+- Big trunks and birches by the tee (a big red-barked conifer on the left), from Alex's photo.
+- **S 136th St** runs about 20 m beyond the basket: out of bounds, paved.
+- `test/hole7.test.ts` pins the length along UDisc's line, the bush (tall, dense, and across the
+  straight line), a way round it, the street OB, and that a drive at the basket dies in the bush
+  while one up the meadow reaches the bend.
+
 ### Hole editor (planned, milestone 6)
 
 A dev-only page (`client/tools/`, like the flight lab: run by `npm run dev`, never built for
@@ -520,7 +539,8 @@ See `client/public/courses/seatac/holes/01.json` for a full example. In short (M
 - `ob`: labeled polygons.
 - `trees`: individually placed trees that matter to play (`leafy`, `young`, `fir`, `bush`).
 - `treeFields`: seeded jittered grids of one kind inside a polygon, for the background forest, so
-  nobody hand-places 400 trees; `clearings` keep them out of the lane.
+  nobody hand-places 400 trees; `clearings` keep them out of the lane. A field can set its own
+  `height` and `canopyRadius` ranges (hole 7's massive bush is a field of 4 m bushes).
 
 Adding a hole = a new JSON file and an entry in `course.json`.
 
